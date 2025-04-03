@@ -1,4 +1,4 @@
-/* XO Duel: Tactical Strike Mode Styles */
+/* XO Duel: Tactical Strike Mode Styles 2025 Edition */
 
 /* Mode-specific variables */
 :root {
@@ -10,14 +10,16 @@
   --tactical-primary: #8e44ad;
   --tactical-secondary: #16a085;
   --move-animation-duration: 0.4s;
+  --card-perspective: 1000px;
+  --card-rotation-time: 0.8s;
 }
 
-/* Tactical Mode Header Badge */
+/* Enhanced Tactical Mode Badge */
 .tactical-badge {
   background: linear-gradient(45deg, var(--tactical-primary), var(--tactical-secondary));
   color: white;
   font-size: 0.75rem;
-  padding: 3px 10px;
+  padding: 5px 12px;
   border-radius: 50px;
   margin-left: 10px;
   text-transform: uppercase;
@@ -25,36 +27,61 @@
   font-weight: 600;
   display: inline-flex;
   align-items: center;
-  box-shadow: 0 3px 10px rgba(142, 68, 173, 0.2);
+  box-shadow: 0 4px 12px rgba(142, 68, 173, 0.3);
+  position: relative;
+  overflow: hidden;
+}
+
+.tactical-badge::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(
+    to bottom right,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.1) 50%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  transform: rotate(45deg);
+  animation: badge-shine 3s infinite;
+}
+
+@keyframes badge-shine {
+  0% { transform: translateX(-100%) rotate(45deg); }
+  100% { transform: translateX(100%) rotate(45deg); }
 }
 
 .tactical-badge i {
   margin-right: 5px;
-  font-size: 0.8rem;
+  font-size: 0.9rem;
 }
 
 /* Game Mode Selector */
 .game-mode-selector {
   margin: 15px 0 20px;
   display: flex;
-  background: var(--bg-color);
+  background: rgba(94, 23, 235, 0.08);
   border-radius: 50px;
   padding: 3px;
   position: relative;
   overflow: hidden;
-  border: 2px solid var(--cell-border);
+  border: 2px solid rgba(94, 23, 235, 0.1);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
 }
 
 .mode-option {
   flex: 1;
   text-align: center;
-  padding: 10px 0;
+  padding: 12px 0;
   cursor: pointer;
   position: relative;
   z-index: 2;
   transition: color 0.3s ease;
   font-weight: 600;
-  font-size: 0.9rem;
+  font-size: 0.95rem;
 }
 
 .mode-slider {
@@ -62,10 +89,11 @@
   height: calc(100% - 6px);
   width: calc(50% - 3px);
   border-radius: 50px;
-  background: var(--primary-color);
+  background: linear-gradient(45deg, var(--primary-color), var(--secondary-color));
   top: 3px;
   left: 3px;
-  transition: transform 0.3s ease;
+  transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  box-shadow: 0 4px 15px rgba(94, 23, 235, 0.3);
 }
 
 .mode-option.active {
@@ -74,159 +102,479 @@
 
 .game-mode-selector[data-active="tactical"] .mode-slider {
   transform: translateX(100%);
-  background: var(--tactical-primary);
+  background: linear-gradient(45deg, var(--tactical-primary), var(--tactical-secondary));
 }
 
-/* Action Selector Panel */
+/* Enhanced Action Panel */
 .action-panel {
-  display: flex;
+  display: none;
   justify-content: space-between;
+  gap: 12px;
   margin-bottom: 20px;
-  position: relative;
-  height: 0;
-  overflow: hidden;
-  transition: height 0.3s ease, opacity 0.3s ease;
+  background-color: rgba(94, 23, 235, 0.05);
+  border-radius: 16px;
+  padding: 15px;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
   opacity: 0;
+  transform: translateY(10px);
 }
 
 .action-panel.active {
-  height: 60px;
+  display: flex;
   opacity: 1;
+  transform: translateY(0);
+  animation: panel-slide-in 0.4s forwards;
+}
+
+@keyframes panel-slide-in {
+  0% {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.dark-mode .action-panel {
+  background-color: rgba(157, 86, 255, 0.1);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
 }
 
 .action-btn-tactical {
-  flex: 1;
-  margin: 0 5px;
-  background: var(--board-color);
-  border: 2px solid var(--cell-border);
-  border-radius: 12px;
-  padding: 10px;
-  cursor: pointer;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  transition: all 0.2s ease;
+  padding: 15px;
+  border-radius: 12px;
+  cursor: pointer;
+  flex: 1;
+  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  position: relative;
+  overflow: hidden;
+  background-color: white;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+  border: 1px solid rgba(94, 23, 235, 0.1);
 }
 
-.action-btn-tactical:hover {
-  transform: translateY(-2px);
-  background: var(--bg-color);
+.dark-mode .action-btn-tactical {
+  background-color: rgba(30, 30, 30, 0.8);
+  border-color: rgba(94, 23, 235, 0.2);
 }
 
-.action-btn-tactical.selected {
-  border-color: var(--tactical-primary);
-  background: rgba(142, 68, 173, 0.1);
+.action-btn-tactical::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, rgba(94, 23, 235, 0.05), rgba(22, 160, 133, 0.05));
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  z-index: 1;
+}
+
+.action-btn-tactical:hover::before {
+  opacity: 1;
 }
 
 .action-btn-tactical i {
-  font-size: 1.2rem;
-  margin-bottom: 5px;
+  font-size: 1.8rem;
+  margin-bottom: 10px;
+  transition: all 0.3s ease;
+  position: relative;
+  z-index: 2;
 }
 
 .action-btn-tactical span {
-  font-size: 0.7rem;
+  font-size: 0.9rem;
   font-weight: 600;
-  text-transform: uppercase;
+  transition: all 0.3s ease;
+  position: relative;
+  z-index: 2;
 }
 
-/* Game board modifications */
-.board-cell.shield {
+.action-btn-tactical[data-action="strike"] i {
+  color: var(--bomb-color);
+}
+
+.action-btn-tactical[data-action="defend"] i {
+  color: var(--shield-color);
+}
+
+.action-btn-tactical[data-action="sacrifice"] i {
+  color: var(--swap-color);
+}
+
+.action-btn-tactical.selected {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 20px rgba(142, 68, 173, 0.3);
+}
+
+.action-btn-tactical.selected[data-action="strike"] {
+  background: linear-gradient(135deg, #e74c3c, #c0392b);
+}
+
+.action-btn-tactical.selected[data-action="defend"] {
+  background: linear-gradient(135deg, #3498db, #2980b9);
+}
+
+.action-btn-tactical.selected[data-action="sacrifice"] {
+  background: linear-gradient(135deg, #f39c12, #d35400);
+}
+
+.action-btn-tactical.selected i,
+.action-btn-tactical.selected span {
+  color: white;
+}
+
+.action-btn-tactical:hover:not(.selected) {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* Enhanced Board Cells with Flip Card Effect */
+.board-cell {
+  perspective: var(--card-perspective);
+}
+
+.board-cell-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transition: transform var(--card-rotation-time);
+  transform-style: preserve-3d;
+}
+
+.board-cell.tactical-flip .board-cell-inner {
+  transform: rotateY(180deg);
+}
+
+.board-cell-front, .board-cell-back {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+}
+
+.board-cell-front {
+  background: linear-gradient(120deg, rgba(255, 255, 255, 0.7) 60%, rgba(242, 242, 242, 0.8) 88%,
+     rgba(230, 230, 230, 0.8) 40%, rgba(242, 242, 242, 0.7) 48%);
+  color: var(--primary-color);
+  border: 1px solid rgba(94, 23, 235, 0.1);
+}
+
+.dark-mode .board-cell-front {
+  background: linear-gradient(120deg, rgba(40, 40, 40, 0.7) 60%, rgba(50, 50, 50, 0.8) 88%,
+     rgba(35, 35, 35, 0.8) 40%, rgba(50, 50, 50, 0.7) 48%);
+  border-color: rgba(94, 23, 235, 0.2);
+}
+
+.board-cell-back {
+  background: linear-gradient(120deg, rgba(142, 68, 173, 0.7) 30%, rgba(22, 160, 133, 0.7) 88%,
+     rgba(142, 68, 173, 0.5) 40%, rgba(22, 160, 133, 0.5) 78%);
+  color: white;
+  transform: rotateY(180deg);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.board-cell-back.x-side {
+  background: linear-gradient(120deg, rgba(231, 76, 60, 0.7) 30%, rgba(192, 57, 43, 0.8) 88%,
+     rgba(231, 76, 60, 0.5) 40%, rgba(192, 57, 43, 0.6) 78%);
+}
+
+.board-cell-back.o-side {
+  background: linear-gradient(120deg, rgba(52, 152, 219, 0.7) 30%, rgba(41, 128, 185, 0.8) 88%,
+     rgba(52, 152, 219, 0.5) 40%, rgba(41, 128, 185, 0.6) 78%);
+}
+
+/* Enhanced Tactical Effects */
+.board-cell.defended {
   position: relative;
   overflow: hidden;
 }
 
-.board-cell.shield::before {
+.board-cell.defended::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: repeating-linear-gradient(
+    45deg,
+    rgba(52, 152, 219, 0.2),
+    rgba(52, 152, 219, 0.2) 10px,
+    rgba(52, 152, 219, 0.3) 10px,
+    rgba(52, 152, 219, 0.3) 20px
+  );
+  z-index: 1;
+  border-radius: 12px;
+  animation: shield-pulse 2s infinite alternate;
+}
+
+.board-cell.defended::after {
   content: '';
   position: absolute;
   width: 70%;
   height: 70%;
-  background-color: transparent;
-  border: 5px solid var(--shield-color);
+  top: 15%;
+  left: 15%;
+  border: 3px solid rgba(52, 152, 219, 0.6);
   border-radius: 50%;
-  opacity: 0.7;
+  animation: shield-rotation 4s infinite linear;
+  z-index: 1;
 }
 
-.board-cell.power-tile {
+@keyframes shield-rotation {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes shield-pulse {
+  from {
+    opacity: 0.4;
+  }
+  to {
+    opacity: 0.8;
+  }
+}
+
+.board-cell.sacrificed {
   position: relative;
-}
-
-.board-cell.power-tile::after {
-  position: absolute;
-  font-size: 1.5rem;
-  opacity: 0.3;
-  transition: opacity 0.3s ease;
-}
-
-.board-cell.power-tile:hover::after {
-  opacity: 0.6;
-}
-
-.board-cell.bomb-tile::after {
-  content: '💣';
-}
-
-.board-cell.swap-tile::after {
-  content: '🔀';
-}
-
-.board-cell.lock-tile::after {
-  content: '🔒';
-}
-
-/* Timer */
-.timer-container {
-  width: 100%;
-  height: 4px;
-  background-color: var(--cell-border);
-  border-radius: 2px;
-  margin: 10px 0;
   overflow: hidden;
 }
 
-.timer-bar {
-  height: 100%;
-  background-color: var(--timer-color);
+.board-cell.sacrificed::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: repeating-linear-gradient(
+    -45deg,
+    rgba(243, 156, 18, 0.2),
+    rgba(243, 156, 18, 0.2) 10px,
+    rgba(243, 156, 18, 0.3) 10px,
+    rgba(243, 156, 18, 0.3) 20px
+  );
+  z-index: 1;
+  border-radius: 12px;
+  animation: sacrifice-pulse 2s infinite alternate;
+}
+
+@keyframes sacrifice-pulse {
+  from {
+    opacity: 0.4;
+  }
+  to {
+    opacity: 0.8;
+  }
+}
+
+/* Tactical action animations */
+.tactical-effect {
+  position: absolute;
+  top: 0;
+  left: 0;
   width: 100%;
-  transition: width linear;
+  height: 100%;
+  pointer-events: none;
+  z-index: 10;
+  border-radius: 12px;
 }
 
-/* Game stats for Blitz mode */
-.game-stats {
-  display: flex;
-  justify-content: space-between;
-  margin-top: 15px;
-  font-size: 0.9rem;
+.strike-effect {
+  background: radial-gradient(circle, rgba(231, 76, 60, 0.7) 0%, rgba(231, 76, 60, 0) 70%);
+  animation: strike-anim 0.8s forwards;
 }
 
-.player-score {
+.defend-effect {
+  background: radial-gradient(circle, rgba(52, 152, 219, 0.7) 0%, rgba(52, 152, 219, 0) 70%);
+  animation: defend-anim 0.8s forwards;
+}
+
+.sacrifice-effect {
+  background: radial-gradient(circle, rgba(243, 156, 18, 0.7) 0%, rgba(243, 156, 18, 0) 70%);
+  animation: sacrifice-anim 0.8s forwards;
+}
+
+@keyframes strike-anim {
+  0% {
+    transform: scale(0);
+    opacity: 0;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    transform: scale(3);
+    opacity: 0;
+  }
+}
+
+@keyframes defend-anim {
+  0% {
+    transform: scale(0) rotate(0deg);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.5) rotate(180deg);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(3) rotate(360deg);
+    opacity: 0;
+  }
+}
+
+@keyframes sacrifice-anim {
+  0% {
+    transform: scale(0);
+    opacity: 0;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    transform: scale(3);
+    opacity: 0;
+  }
+}
+
+/* Enhanced Tactical Indicators */
+.shield-counter {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  background: linear-gradient(135deg, #3498db, #2980b9);
+  color: white;
+  border-radius: 50%;
+  width: 25px;
+  height: 25px;
   display: flex;
-  flex-direction: column;
   align-items: center;
+  justify-content: center;
+  font-size: 0.9rem;
+  font-weight: bold;
+  z-index: 2;
+  box-shadow: 0 3px 8px rgba(52, 152, 219, 0.5);
+  animation: counter-pop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
-.score-number {
-  font-size: 1.5rem;
-  font-weight: 700;
-  margin-top: 3px;
+@keyframes counter-pop {
+  0% {
+    transform: scale(0);
+  }
+  80% {
+    transform: scale(1.2);
+  }
+  100% {
+    transform: scale(1);
+  }
 }
 
-.player-score.active {
-  color: var(--primary-color);
+.tactical-icon {
+  position: absolute;
+  top: 5px;
+  left: 5px;
+  font-size: 0.9rem;
+  color: rgba(0, 0, 0, 0.7);
+  z-index: 2;
+  background-color: rgba(255, 255, 255, 0.8);
+  border-radius: 50%;
+  width: 25px;
+  height: 25px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
 }
 
-.player-o.active {
-  color: var(--secondary-color);
+.dark-mode .tactical-icon {
+  color: rgba(255, 255, 255, 0.9);
+  background-color: rgba(0, 0, 0, 0.5);
 }
 
-/* Strike & Defend animations */
-@keyframes strike-animation {
+/* Enhanced X & O game pieces */
+.board-cell.x-move::before,
+.board-cell.x-move::after {
+  content: '';
+  position: absolute;
+  width: 70%;
+  height: 8px;
+  background: linear-gradient(90deg, #e74c3c, #c0392b);
+  border-radius: 4px;
+  z-index: 2;
+  box-shadow: 0 0 10px rgba(231, 76, 60, 0.5);
+}
+
+.board-cell.x-move::before {
+  transform: rotate(45deg);
+  animation: x-line-1 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.board-cell.x-move::after {
+  transform: rotate(-45deg);
+  animation: x-line-2 0.3s 0.1s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes x-line-1 {
+  0% {
+    transform: rotate(45deg) scaleX(0);
+    opacity: 0;
+  }
+  100% {
+    transform: rotate(45deg) scaleX(1);
+    opacity: 1;
+  }
+}
+
+@keyframes x-line-2 {
+  0% {
+    transform: rotate(-45deg) scaleX(0);
+    opacity: 0;
+  }
+  100% {
+    transform: rotate(-45deg) scaleX(1);
+    opacity: 1;
+  }
+}
+
+.board-cell.o-move::before {
+  content: '';
+  position: absolute;
+  width: 70%;
+  height: 70%;
+  border: 8px solid;
+  border-image: linear-gradient(90deg, #3498db, #2980b9) 1;
+  border-radius: 50%;
+  z-index: 2;
+  box-shadow: 0 0 10px rgba(52, 152, 219, 0.5);
+  animation: o-appear 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes o-appear {
   0% {
     transform: scale(0);
     opacity: 0;
   }
   70% {
-    transform: scale(1.2);
+    transform: scale(1.1);
   }
   100% {
     transform: scale(1);
@@ -234,186 +582,304 @@
   }
 }
 
-@keyframes defend-animation {
-  0% {
-    transform: scale(0) rotate(0deg);
-    opacity: 0;
-  }
-  50% {
-    transform: scale(1.3) rotate(180deg);
-  }
-  100% {
-    transform: scale(1) rotate(360deg);
-    opacity: 0.7;
-  }
-}
-
-@keyframes bomb-pulse {
-  0% {
-    transform: scale(1);
-  }
-  50% {
-    transform: scale(1.1);
-  }
-  100% {
-    transform: scale(1);
-  }
-}
-
-.board-cell.bomb-active::after {
-  animation: bomb-pulse 1s infinite;
-  opacity: 0.8;
-}
-
-/* Win indicator for tactical mode */
-.diagonal-win-indicator {
-  position: absolute;
-  background: linear-gradient(45deg, var(--tactical-primary), var(--tactical-secondary));
-  height: 5px;
+/* Enhanced Timer for Blitz Mode */
+.timer-container {
   width: 100%;
-  top: 50%;
+  height: 6px;
+  background-color: rgba(0, 0, 0, 0.1);
+  border-radius: 3px;
+  margin: 15px 0;
+  overflow: hidden;
+  position: relative;
+}
+
+.dark-mode .timer-container {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.timer-bar {
+  height: 100%;
+  background: linear-gradient(90deg, #2ecc71, #27ae60);
+  width: 100%;
+  transition: width 0.1s linear;
+}
+
+.timer-warning .timer-bar {
+  background: linear-gradient(90deg, #f39c12, #e67e22);
+}
+
+.timer-danger .timer-bar {
+  background: linear-gradient(90deg, #e74c3c, #c0392b);
+}
+
+.timer-container::after {
+  content: '';
+  position: absolute;
+  top: 0;
   left: 0;
-  transform: rotate(45deg) scaleX(0);
-  transform-origin: center;
-  animation: diagonal-win 0.6s forwards;
-  border-radius: 5px;
-  z-index: 3;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(90deg, 
+    transparent 0%, 
+    rgba(255, 255, 255, 0.4) 50%, 
+    transparent 100%);
+  animation: timer-shine 2s infinite linear;
 }
 
-.diagonal-win-indicator.secondary {
-  transform: rotate(-45deg) scaleX(0);
-}
-
-@keyframes diagonal-win {
-  from {
-    transform-origin: center;
-    transform: rotate(45deg) scaleX(0);
+@keyframes timer-shine {
+  0% {
+    transform: translateX(-100%);
   }
-  to {
-    transform-origin: center;
-    transform: rotate(45deg) scaleX(1.4);
+  100% {
+    transform: translateX(100%);
   }
 }
 
-@keyframes diagonal-win-secondary {
-  from {
-    transform-origin: center;
-    transform: rotate(-45deg) scaleX(0);
-  }
-  to {
-    transform-origin: center;
-    transform: rotate(-45deg) scaleX(1.4);
-  }
+/* Enhanced Game Stats for Tactical Mode */
+.game-stats {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 30px;
+  margin: 15px 0;
+  padding: 15px;
+  background-color: rgba(94, 23, 235, 0.05);
+  border-radius: 16px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
 }
 
-/* Gambit mode bet UI */
-.bet-container {
+.dark-mode .game-stats {
+  background-color: rgba(157, 86, 255, 0.1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.player-score {
   display: flex;
   flex-direction: column;
   align-items: center;
-  margin: 15px 0;
+  padding: 10px 15px;
+  border-radius: 12px;
+  transition: all 0.3s ease;
 }
 
-.bet-amount {
-  display: flex;
-  align-items: center;
-  margin: 10px 0;
+.player-score span {
+  font-size: 0.9rem;
+  font-weight: 500;
+  margin-bottom: 5px;
 }
 
-.bet-amount button {
-  width: 30px;
-  height: 30px;
-  border-radius: 50%;
-  border: none;
-  background: var(--cell-border);
-  color: var(--text-color);
-  font-size: 1rem;
-  cursor: pointer;
+.score-number {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--primary-color);
 }
 
-.bet-amount span {
-  margin: 0 15px;
-  font-weight: 600;
-  font-size: 1.2rem;
+.player-score.active {
+  background-color: rgba(94, 23, 235, 0.1);
+  transform: translateY(-3px);
+  box-shadow: 0 5px 15px rgba(94, 23, 235, 0.1);
 }
 
-.bet-amount input {
-  width: 80px;
-  text-align: center;
-  padding: 5px;
-  border-radius: 5px;
-  border: 2px solid var(--cell-border);
-  background: var(--bg-color);
-  color: var(--text-color);
-  font-weight: 600;
-  font-size: 1.2rem;
+.player-score.player-x .score-number {
+  color: #e74c3c;
 }
 
-.confirm-bet {
-  background: var(--tactical-primary);
-  color: white;
-  border: none;
-  padding: 10px 20px;
-  border-radius: 50px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
+.player-score.player-o .score-number {
+  color: #3498db;
 }
 
-.confirm-bet:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 5px 15px rgba(142, 68, 173, 0.3);
+.score-divider {
+  font-size: 2rem;
+  font-weight: 700;
+  color: rgba(0, 0, 0, 0.3);
 }
 
-/* Replay button */
+.dark-mode .score-divider {
+  color: rgba(255, 255, 255, 0.3);
+}
+
+/* Winning Visualization */
+.board-cell.winning-cell {
+  animation: winning-pulse 1.5s infinite alternate;
+  position: relative;
+  overflow: hidden;
+  z-index: 2;
+}
+
+.board-cell.winning-cell::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(94, 23, 235, 0.2);
+  z-index: 2;
+  border-radius: 12px;
+}
+
+@keyframes winning-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(94, 23, 235, 0.7);
+    transform: scale(1);
+  }
+  70% {
+    box-shadow: 0 0 0 15px rgba(94, 23, 235, 0);
+    transform: scale(1.05);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(94, 23, 235, 0);
+    transform: scale(1);
+  }
+}
+
+/* Win line indicator */
+.win-line {
+  position: absolute;
+  background: linear-gradient(90deg, var(--tactical-primary), var(--tactical-secondary));
+  height: 8px;
+  border-radius: 4px;
+  z-index: 10;
+  box-shadow: 0 0 20px rgba(142, 68, 173, 0.6);
+  opacity: 0;
+  transform-origin: center;
+}
+
+.win-line.horizontal {
+  width: 0;
+  top: 50%;
+  left: 0;
+  transform: translateY(-50%);
+  animation: horizontal-line-grow 0.6s 0.5s forwards cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.win-line.vertical {
+  width: 8px;
+  height: 0;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  animation: vertical-line-grow 0.6s 0.5s forwards cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.win-line.diagonal-1 {
+  width: 0;
+  top: 50%;
+  left: 0;
+  transform: translateY(-50%) rotate(45deg);
+  transform-origin: left;
+  animation: diagonal-line-grow 0.6s 0.5s forwards cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.win-line.diagonal-2 {
+  width: 0;
+  top: 50%;
+  right: 0;
+  transform: translateY(-50%) rotate(-45deg);
+  transform-origin: right;
+  animation: diagonal-line-grow 0.6s 0.5s forwards cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes horizontal-line-grow {
+  0% {
+    width: 0;
+    opacity: 0;
+  }
+  100% {
+    width: 100%;
+    opacity: 1;
+  }
+}
+
+@keyframes vertical-line-grow {
+  0% {
+    height: 0;
+    opacity: 0;
+  }
+  100% {
+    height: 100%;
+    opacity: 1;
+  }
+}
+
+@keyframes diagonal-line-grow {
+  0% {
+    width: 0;
+    opacity: 0;
+  }
+  100% {
+    width: 140%;
+    opacity: 1;
+  }
+}
+
+/* Enhanced Replay & Rematch UI */
 .replay-container {
-  text-align: center;
-  margin-top: 20px;
+  display: none;
+  justify-content: center;
+  gap: 15px;
+  margin: 20px 0;
+}
+
+.replay-container.active {
+  display: flex;
+  animation: fade-in 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .replay-btn {
-  background: transparent;
-  border: 2px solid var(--tactical-primary);
-  color: var(--tactical-primary);
-  padding: 8px 20px;
-  border-radius: 50px;
-  font-weight: 600;
+  background-color: rgba(94, 23, 235, 0.1);
+  color: var(--primary-color);
+  border: none;
+  padding: 12px 20px;
+  border-radius: 12px;
   cursor: pointer;
-  transition: all 0.2s ease;
-  display: inline-flex;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  display: flex;
   align-items: center;
 }
 
 .replay-btn i {
-  margin-right: 8px;
+  margin-right: 10px;
 }
 
 .replay-btn:hover {
-  background: var(--tactical-primary);
-  color: white;
+  background-color: rgba(94, 23, 235, 0.2);
+  transform: translateY(-3px);
+  box-shadow: 0 5px 15px rgba(94, 23, 235, 0.1);
 }
 
 .rematch-btn {
-  background: var(--tactical-primary);
+  background: linear-gradient(135deg, var(--tactical-primary), var(--tactical-secondary));
   color: white;
+  border: none;
   padding: 12px 25px;
-  border-radius: 50px;
+  border-radius: 12px;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s ease;
-  display: inline-flex;
+  transition: all 0.3s ease;
+  display: flex;
   align-items: center;
-  margin-top: 15px;
-  border: none;
-  font-size: 1rem;
   box-shadow: 0 5px 15px rgba(142, 68, 173, 0.3);
+  text-transform: uppercase;
 }
 
 .rematch-btn i {
-  margin-right: 8px;
+  margin-right: 10px;
 }
 
 .rematch-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 5px 20px rgba(142, 68, 173, 0.4);
+  transform: translateY(-3px);
+  box-shadow: 0 8px 20px rgba(142, 68, 173, 0.4);
 } 

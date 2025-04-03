@@ -70,7 +70,7 @@ document.addEventListener('DOMContentLoaded', () => {
     copyRoomBtn.style.display = 'none';
     exitRoomBtn.style.display = 'none';
     newGameBtn.style.display = 'none';
-    
+
     // Initialize tactical mode badge as hidden
     if (window.tacticalMode) {
       document.getElementById('tacticalBadge').style.display = 'none';
@@ -108,14 +108,35 @@ document.addEventListener('DOMContentLoaded', () => {
     statusMessage.textContent = message;
   };
 
-  // Show notification
-  const showNotification = (message, duration = 3000) => {
+  // Update notification system to use modern animation
+  function showNotification(message, type = 'info') {
+    const notification = document.getElementById('notification');
+    const notificationMessage = document.getElementById('notificationMessage');
+    
+    // Clear any existing notification
+    clearTimeout(notificationTimeout);
+    
+    // Set message and show notification
     notificationMessage.textContent = message;
-    notification.classList.add('show');
+    
+    // Add type class for styling
+    notification.className = 'notification';
+    notification.classList.add(`notification-${type}`);
+    
+    // Add entrance animation
+    notification.classList.add('notification-show');
+    
+    // Auto-hide after delay
+    notificationTimeout = setTimeout(() => {
+        notification.classList.remove('notification-show');
+        notification.classList.add('notification-hide');
+        
+        // Remove hide class after animation completes
     setTimeout(() => {
-      notification.classList.remove('show');
-    }, duration);
-  };
+            notification.classList.remove('notification-hide');
+        }, 500);
+    }, 3000);
+  }
 
   // Render the board based on current game state
   const renderBoard = () => {
@@ -244,39 +265,7 @@ document.addEventListener('DOMContentLoaded', () => {
         newGameBtn.style.display = 'none';
         
         // Show ready button (will be enabled when player 2 joins)
-        const readyBtn = document.createElement('button');
-        readyBtn.id = 'readyBtn';
-        readyBtn.className = 'action-btn';
-        readyBtn.disabled = true;
-        
-        // Create button elements
-        const buttonTop = document.createElement('div');
-        buttonTop.className = 'button-top';
-        buttonTop.innerHTML = 'Start Game';
-        
-        const buttonBottom = document.createElement('div');
-        buttonBottom.className = 'button-bottom';
-        
-        const buttonBase = document.createElement('div');
-        buttonBase.className = 'button-base';
-        
-        // Append elements to button
-        readyBtn.appendChild(buttonTop);
-        readyBtn.appendChild(buttonBottom);
-        readyBtn.appendChild(buttonBase);
-        
-        readyBtn.addEventListener('click', markPlayerReady);
-        
-        // Find the correct container - handle multiple possibilities
-        const actionButtonsContainer = document.querySelector('.action-buttons') || 
-                                       document.querySelector('.game-actions');
-        
-        if (actionButtonsContainer) {
-          actionButtonsContainer.appendChild(readyBtn);
-        } else {
-          // Fallback - append to gameBoard
-          document.getElementById('gameBoard').appendChild(readyBtn);
-        }
+        createReadyButton();
         
         // Initialize tactical mode if needed
         if (isTacticalMode) {
@@ -318,8 +307,44 @@ document.addEventListener('DOMContentLoaded', () => {
       });
   };
 
-  // Mark player as ready
-  const markPlayerReady = () => {
+  // Update ready button creation to use the modern button style
+  function createReadyButton() {
+    const actionsDiv = document.querySelector('.action-buttons');
+    
+    // Clear previous buttons
+    actionsDiv.innerHTML = '';
+    
+    // Create new button with modern style
+    const readyBtn = document.createElement('button');
+    readyBtn.id = 'readyBtn';
+    readyBtn.className = 'ready-btn';
+    
+    // Create button structure
+    const buttonTop = document.createElement('div');
+    buttonTop.className = 'button-top';
+    buttonTop.innerHTML = 'I\'m Ready';
+    
+    const buttonBottom = document.createElement('div');
+    buttonBottom.className = 'button-bottom';
+    
+    const buttonBase = document.createElement('div');
+    buttonBase.className = 'button-base';
+    
+    // Append button parts
+    readyBtn.appendChild(buttonTop);
+    readyBtn.appendChild(buttonBottom);
+    readyBtn.appendChild(buttonBase);
+    
+    // Add event listener
+    readyBtn.addEventListener('click', markPlayerReady);
+    
+    // Append to container
+    actionsDiv.appendChild(readyBtn);
+    actionsDiv.style.display = 'flex';
+  }
+
+  // Update mark player ready function to handle new button structure
+  function markPlayerReady() {
     if (!gameRef) return;
     
     const playerType = gameState.isCreator ? 'creator' : 'joiner';
@@ -544,64 +569,33 @@ document.addEventListener('DOMContentLoaded', () => {
               // Set the entire state or just update players node
               return gameRef.child('players').set(updatedPlayers);
             })
-            .then(() => {
+          .then(() => {
               console.log('Successfully joined game');
-              
-              // Listen for changes
-              setupGameListeners();
-              
-              // Update UI
-              gameSetup.classList.remove('active');
-              gameBoard.classList.add('active');
-              roomCodeDisplay.textContent = roomCode;
+            
+            // Listen for changes
+            setupGameListeners();
+            
+            // Update UI
+            gameSetup.classList.remove('active');
+            gameBoard.classList.add('active');
+            roomCodeDisplay.textContent = roomCode;
               playerSymbol.textContent = 'Waiting...';
               
               updateStatusMessage("Waiting for game to start...");
-              
-              // Show action buttons
-              copyRoomBtn.style.display = 'flex';
-              exitRoomBtn.style.display = 'flex';
+            
+            // Show action buttons
+            copyRoomBtn.style.display = 'flex';
+            exitRoomBtn.style.display = 'flex';
               newGameBtn.style.display = 'none';
               
               // Show ready button for player 2
-              const readyBtn = document.createElement('button');
-              readyBtn.id = 'readyBtn';
-              readyBtn.className = 'action-btn';
-              
-              // Create button elements
-              const buttonTop = document.createElement('div');
-              buttonTop.className = 'button-top';
-              buttonTop.innerHTML = 'Ready!';
-              
-              const buttonBottom = document.createElement('div');
-              buttonBottom.className = 'button-bottom';
-              
-              const buttonBase = document.createElement('div');
-              buttonBase.className = 'button-base';
-              
-              // Append elements to button
-              readyBtn.appendChild(buttonTop);
-              readyBtn.appendChild(buttonBottom);
-              readyBtn.appendChild(buttonBase);
-              
-              readyBtn.addEventListener('click', markPlayerReady);
-              
-              // Find the correct container - handle multiple possibilities
-              const actionButtonsContainer = document.querySelector('.action-buttons') || 
-                                             document.querySelector('.game-actions');
-              
-              if (actionButtonsContainer) {
-                actionButtonsContainer.appendChild(readyBtn);
-              } else {
-                // Fallback - append to gameBoard
-                document.getElementById('gameBoard').appendChild(readyBtn);
-              }
-              
-              // Initialize tactical mode if needed
-              if (gameData.gameMode === 'tactical' && window.tacticalMode) {
-                window.tacticalMode.startTacticalGame();
-              }
-              
+              createReadyButton();
+            
+            // Initialize tactical mode if needed
+            if (gameData.gameMode === 'tactical' && window.tacticalMode) {
+              window.tacticalMode.startTacticalGame();
+            }
+            
               // Enable the creator's start button safely
               gameRef.child('readyState').once('value', snapshot => {
                 const currentReadyState = snapshot.val() || {};
@@ -611,11 +605,11 @@ document.addEventListener('DOMContentLoaded', () => {
               .then(() => {
                 showNotification('Joined the game successfully! Press Ready when you are ready to play.');
               });
-            })
-            .catch(error => {
-              console.error('Failed to update game status:', error);
-              showNotification('Error joining game: ' + error.message);
-            });
+          })
+          .catch(error => {
+            console.error('Failed to update game status:', error);
+            showNotification('Error joining game: ' + error.message);
+          });
         } else if (gameData.status === 'active') {
           // Check if we can reconnect as a player
           const players = gameData.players || {};
@@ -740,7 +734,7 @@ document.addEventListener('DOMContentLoaded', () => {
       
       // Update turn status once we know our symbol
       if (gameState.playerSymbol !== 'waiting') {
-        gameState.isPlayerTurn = gameState.currentTurn === gameState.playerSymbol;
+      gameState.isPlayerTurn = gameState.currentTurn === gameState.playerSymbol;
       }
       
       // Update UI based on current game state
@@ -781,15 +775,15 @@ document.addEventListener('DOMContentLoaded', () => {
         if (data.status === 'waiting') {
           if (gameState.isCreator) {
             updateStatusMessage("Waiting for Player 2 to join...");
-          } else {
+        } else {
             updateStatusMessage("Waiting for game to start...");
           }
         } else if (data.status === 'active') {
           if (gameState.playerSymbol !== 'waiting') {
-            if (gameState.isPlayerTurn) {
-              updateStatusMessage("Your turn");
-            } else {
-              updateStatusMessage(`${gameState.currentTurn}'s turn`);
+          if (gameState.isPlayerTurn) {
+            updateStatusMessage("Your turn");
+          } else {
+            updateStatusMessage(`${gameState.currentTurn}'s turn`);
             }
           }
         }
@@ -802,10 +796,10 @@ document.addEventListener('DOMContentLoaded', () => {
       
       // If we're in an active game and using X/O symbols
       if (gameState.playerSymbol !== 'waiting' && gameState.status === 'active') {
-        // If the other player disconnected, update the status
-        if (gameState.playerSymbol === 'X' && !players.O) {
+      // If the other player disconnected, update the status
+      if (gameState.playerSymbol === 'X' && !players.O) {
           updateStatusMessage("Waiting for player O to rejoin...");
-        } else if (gameState.playerSymbol === 'O' && !players.X) {
+      } else if (gameState.playerSymbol === 'O' && !players.X) {
           updateStatusMessage("Waiting for player X to rejoin...");
         }
       }
@@ -1267,478 +1261,305 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   };
 
-  // Modified: makeMove function to handle quick games with real players
+  // Make a move
   const makeMove = (index) => {
-    // Check if it's a valid move
-    if (
-      !gameState.gameActive ||
-      !gameState.isPlayerTurn || 
-      gameState.board[index] !== '' || 
-      gameState.gameEnded
-    ) {
+    // Don't process a move if the game has ended
+    if (gameState.gameEnded) {
+      showNotification('Game over! Start a new game.');
       return;
     }
-    
-    // For AI quick games
-    if (gameState.isQuickGame && gameState.isAIGame) {
-      // Update local state
-      const newBoard = [...gameState.board];
-      newBoard[index] = gameState.playerSymbol;
-      gameState.board = newBoard;
+
+    // Check if it's a quick game
+    if (gameState.isQuickGame) {
+      // For quick games, player is always X
+      if (gameState.board[index] || gameState.currentTurn !== 'X') {
+        return;
+      }
+
+      // Update the local board
+      gameState.board[index] = 'X';
+      
+      // Add the flip card effect for tactical mode visual feedback
+      const cell = document.querySelector(`.board-cell[data-index="${index}"]`);
+      
+      // Update cell with modern flip card effect
+      const cellInner = cell.querySelector('.board-cell-inner');
+      if (cellInner) {
+        cell.classList.add('tactical-flip');
+        setTimeout(() => {
+          cellInner.querySelector('.board-cell-back').classList.add('x-side');
+        }, 150);
+      }
+
+      // Add X move class and animation
+      cell.classList.add('x-move');
+      
+      // Add tactical effect animation
+      const effectElement = document.createElement('div');
+      effectElement.classList.add('tactical-effect', 'strike-effect');
+      cell.appendChild(effectElement);
+      setTimeout(() => effectElement.remove(), 800);
+
+      // Check for a win
+      const winner = checkWin(gameState.board);
+      if (winner) {
+        handleGameEnd(winner);
+        return;
+      }
+
+      // Check for a draw
+      if (!gameState.board.includes(null)) {
+        handleGameEnd('draw');
+        return;
+      }
+
+      // Switch turn to O
       gameState.currentTurn = 'O';
-      gameState.isPlayerTurn = false;
-      
-      // Update UI
-      boardCells[index].classList.add('x-move');
-      
-      // Check for win/draw
-      const result = checkWin(newBoard);
-      if (result) {
-        gameState.gameEnded = true;
-        gameState.winner = result;
-        
-        if (result.winner === 'Draw') {
-          updateStatusMessage("Game ended in a draw!");
-        } else {
-          updateStatusMessage("You won! 🎉");
-          
-          // Highlight winning cells
-          if (result.line) {
-            result.line.forEach(index => {
-              boardCells[index].classList.add('winner');
-            });
-          }
-        }
-        
-        // Show new game button
-        newGameBtn.style.display = 'flex';
-      } else {
-        updateStatusMessage("Computer's turn...");
+      updateGameStateUI();
+
+      // Wait a moment, then make the CPU move
+      setTimeout(() => {
         makeCpuMove();
-      }
-      
+      }, 700);
+
       return;
     }
-    
-    // For quick games with real players
-    if (gameState.isQuickGame && !gameState.isAIGame) {
-      // Update local state first
-      const newBoard = [...gameState.board];
-      newBoard[index] = gameState.playerSymbol;
-      
-      // Check for win/draw
-      const result = checkWin(newBoard);
-      
-      // Update Firebase for quick games
-      if (gameRef) {
-        gameRef.update({
-          board: newBoard,
-          currentTurn: gameState.playerSymbol === 'X' ? 'O' : 'X',
-          gameEnded: result !== null,
-          winner: result
-        })
-        .then(() => {
-          console.log('Move updated successfully');
-        })
-        .catch(error => {
-          console.error('Error updating move:', error);
-          showNotification('Error: ' + error.message);
-        });
-      }
-      
-      return;
-    }
-    
-    // If in tactical mode, use tactical move logic
+
+    // If it's not a quick game, check if it's in tactical mode
     if (window.tacticalMode && window.tacticalMode.state.gameMode === 'tactical') {
-      const moveResult = window.tacticalMode.makeTacticalMove(index);
-      
-      // If the tactical move was successful, update Firebase
-      if (moveResult) {
-        // Update Firebase - in a more complete implementation, we would 
-        // need to sync the tactical game state with Firebase as well
-        if (gameRef) {
-          // For simplicity, we're still updating the regular board state
-          const newBoard = [...gameState.board];
-          newBoard[index] = gameState.playerSymbol;
-          
-          gameRef.update({
-            board: newBoard,
-            currentTurn: gameState.playerSymbol === 'X' ? 'O' : 'X'
-          });
-          
-          // Record the move
-          movesRef.push({
-            player: gameState.playerSymbol,
-            position: index,
-            timestamp: firebase.database.ServerValue.TIMESTAMP,
-            tacticalAction: window.tacticalMode.state.currentAction
-          });
-        }
-        
-        // If in blitz mode, restart the timer
-        if (window.tacticalMode.state.isBlitzMode) {
-          startBlitzTimer();
-        }
+      // Use tactical mode move logic instead
+      const result = window.tacticalMode.makeTacticalMove(index);
+      if (result) {
+        updateFirebaseGameState();
       }
-      
       return;
     }
-    
-    // Regular move in classic mode
-    // Update local state
-    const newBoard = [...gameState.board];
-    newBoard[index] = gameState.playerSymbol;
-    
-    // Check for win/draw
-    const result = checkWin(newBoard);
-    
-    // Update Firebase
-    if (gameRef) {
-      gameRef.update({
-        board: newBoard,
-        currentTurn: gameState.playerSymbol === 'X' ? 'O' : 'X',
-        gameEnded: result !== null,
-        winner: result
-      });
-      
-      // Record the move
-      movesRef.push({
-        player: gameState.playerSymbol,
-        position: index,
-        timestamp: firebase.database.ServerValue.TIMESTAMP
-      });
+
+    // Regular multiplayer game logic
+    if (!gameState.roomCode) {
+      showNotification('Please create or join a game first');
+      return;
     }
+
+    // Cannot make a move if not your turn
+    if (gameState.currentTurn !== gameState.playerSymbol) {
+      showNotification('Not your turn yet!');
+      return;
+    }
+
+    // Cannot move to an occupied cell
+    if (gameState.board[index]) {
+      showNotification('This cell is already occupied!');
+      return;
+    }
+
+    // Update the local board
+    gameState.board[index] = gameState.playerSymbol;
+    
+    // Add the flip card effect for visual feedback
+    const cell = document.querySelector(`.board-cell[data-index="${index}"]`);
+    
+    // Update cell with modern flip card effect
+    const cellInner = cell.querySelector('.board-cell-inner');
+    if (cellInner) {
+      cell.classList.add('tactical-flip');
+      setTimeout(() => {
+        const backFace = cellInner.querySelector('.board-cell-back');
+        if (gameState.playerSymbol === 'X') {
+          backFace.classList.add('x-side');
+        } else {
+          backFace.classList.add('o-side');
+        }
+      }, 150);
+    }
+    
+    // Add symbol class for animations
+    cell.classList.add(gameState.playerSymbol === 'X' ? 'x-move' : 'o-move');
+    
+    // Add tactical effect animation for visual flair
+    const effectElement = document.createElement('div');
+    effectElement.classList.add('tactical-effect', 'strike-effect');
+    cell.appendChild(effectElement);
+    setTimeout(() => effectElement.remove(), 800);
+
+    // Check for a win
+    const winner = checkWin(gameState.board);
+    if (winner) {
+      gameState.gameEnded = true;
+      gameState.winner = winner;
+    }
+
+    // Check for a draw
+    if (!gameState.board.includes(null) && !gameState.gameEnded) {
+      gameState.gameEnded = true;
+      gameState.winner = 'draw';
+    }
+
+    // Update the game state in Firebase
+    updateFirebaseGameState();
+
+    // Update the game UI
+    updateGameStateUI();
   };
 
-  // Modified: resetGame function to handle quick games with real players
+  // Reset the game for a new round
   const resetGame = () => {
-    if (gameState.isQuickGame && gameState.isAIGame) {
-      // Reset the local game state for AI games
-      gameState.board = Array(9).fill('');
-      gameState.currentTurn = 'X';
-      gameState.isPlayerTurn = true;
-      gameState.gameEnded = false;
-      gameState.winner = null;
+    gameState.board = [null, null, null, null, null, null, null, null, null];
+    gameState.gameEnded = false;
+    gameState.winner = null;
+
+    // Reset all board cells
+    document.querySelectorAll('.board-cell').forEach(cell => {
+      cell.className = 'board-cell';
+      cell.dataset.value = '';
       
-      // Reset UI
-      boardCells.forEach(cell => {
-        cell.classList.remove('x-move', 'o-move', 'winner', 'cpu-move-animation');
-      });
-      
-      updateStatusMessage("Your turn! Select a cell to play");
-      showNotification('New game! Start playing 👍');
-      return;
-    }
-    
-    if (gameState.isQuickGame && !gameState.isAIGame) {
-      // Only the X player (creator) can reset
-      if (gameState.playerSymbol !== 'X') {
-        showNotification("Only the X player can start a new game");
-        return;
+      // Reset cell inner elements for the flip card effect
+      const cellInner = cell.querySelector('.board-cell-inner');
+      if (cellInner) {
+        cellInner.style.transform = '';
+        const backFace = cellInner.querySelector('.board-cell-back');
+        if (backFace) {
+          backFace.className = 'board-cell-back';
+        }
       }
+
+      // Remove any tactical effects
+      const effects = cell.querySelectorAll('.tactical-effect');
+      effects.forEach(effect => effect.remove());
       
-      // Only allow resetting if the game has ended
-      if (!gameState.gameEnded) {
-        showNotification("Can't reset until game is finished");
-        return;
-      }
-      
-      // Reset the board
-      if (gameRef) {
-        const resetData = {
-          board: Array(9).fill(''),
-          currentTurn: 'X',
-          gameEnded: false,
-          winner: null,
-          status: 'active'
-        };
-        
-        gameRef.update(resetData)
-          .then(() => {
-            showNotification('Starting a new game');
-          })
-          .catch(error => {
-            console.error('Error resetting game:', error);
-            showNotification('Error: ' + error.message);
-          });
-      }
-      
-      return;
-    }
-    
-    // Original logic for online games
-    if (!gameRef) return;
-    
-    // Only allow resetting if the game has ended
-    if (!gameState.gameEnded) {
-      showNotification("Can't reset until game is finished");
-      return;
-    }
-    
-    // Reset the board
-    const resetData = {
-      board: Array(9).fill(''),
-      currentTurn: 'X',
-      gameEnded: false,
-      winner: null,
-      status: 'active'
-    };
-    
-    // If in tactical mode, reset that too
-    if (window.tacticalMode && window.tacticalMode.state.gameMode === 'tactical') {
+      // Remove any tactical classes
+      cell.classList.remove('tactical-flip', 'x-move', 'o-move', 'defended', 'sacrificed', 'winning-cell');
+    });
+
+    // Remove any win line
+    const winLine = document.querySelector('.win-line');
+    if (winLine) winLine.remove();
+
+    // Reset tactical mode if it's active
+    if (window.tacticalMode) {
       window.tacticalMode.resetGame();
     }
-    
-    gameRef.update(resetData);
-    
-    showNotification('Starting a new game');
+
+    // Update Firebase only if we're in a multiplayer game
+    if (gameState.roomCode && !gameState.isQuickGame) {
+      updateFirebaseGameState();
+    }
+
+    // Update the UI
+    updateGameStateUI();
   };
-  
-  // Modified: exitRoom function to handle quick games with real players
-  const exitRoom = () => {
-    if (gameState.isQuickGame && gameState.isAIGame) {
-      // ... existing AI game exit logic ...
-      return;
-    }
-    
-    if (gameState.isQuickGame && !gameState.isAIGame) {
-      // If we're still waiting for a match
-      if (waitingForMatch) {
-        // Clear timeout
-        if (matchmakingTimeout) {
-          clearTimeout(matchmakingTimeout);
-          matchmakingTimeout = null;
-        }
-        
-        // Remove waiting match if we created one
-        if (gameState.roomCode && quickMatchRef) {
-          quickMatchRef.child(gameState.roomCode).remove()
-            .catch(error => console.error('Error removing waiting match:', error));
-        }
-        
-        waitingForMatch = false;
-      }
-      
-      // If we were in an active game, update players
-      if (gameRef) {
-        gameRef.child('players').once('value')
-          .then((snapshot) => {
-            const players = snapshot.val() || {};
-            
-            // Create new players without this player
-            const updatedPlayers = { ...players };
-            delete updatedPlayers[gameState.playerSymbol];
-            
-            // Update Firebase
-            return gameRef.child('players').set(updatedPlayers);
-          })
-          .then(() => {
-            // Unsubscribe from listeners
-            gameRef.off();
-          })
-          .catch(error => {
-            console.error('Error updating players:', error);
-          });
-      }
-      
-      // Reset UI and game state
-      gameBoard.classList.remove('active');
-      gameSetup.classList.add('active');
-      roomCodeDisplay.textContent = '-';
-      playerSymbol.textContent = '-';
-      updateStatusMessage('Create a new game or join an existing one');
-      
-      // Reset game board UI
-      boardCells.forEach(cell => {
-        cell.classList.remove('x-move', 'o-move', 'winner', 'cpu-move-animation');
-      });
-      
-      // Reset game state
-      gameState = {
-        roomCode: null,
-        playerSymbol: null,
-        isPlayerTurn: false,
-        gameActive: false,
-        board: Array(9).fill(''),
-        currentTurn: 'X',
-        gameEnded: false,
-        winner: null,
-        playerName: gameState.playerName,
-        isCreator: false,
-        readyState: {
-          creator: false,
-          joiner: false
-        },
-        isQuickGame: false,
-        isAIGame: false
-      };
-      
-      // Hide game action buttons
-      copyRoomBtn.style.display = 'none';
-      exitRoomBtn.style.display = 'none';
-      newGameBtn.style.display = 'none';
-      
-      showNotification('You left the game');
-      return;
-    }
-    
-    // Original logic for online games
-    if (!gameRef) {
-      showNotification('Not currently in a game');
-      return;
-    }
-    
-    // Handle player removal from Firebase
-    if (gameRef) {
-      // First get the current players
-      gameRef.child('players').once('value')
-        .then((snapshot) => {
-          const players = snapshot.val() || {};
-          
-          // If we're using symbols X/O
-          if (gameState.playerSymbol === 'X' || gameState.playerSymbol === 'O') {
-            // Create new players without this player
-            const updatedPlayers = { ...players };
-            delete updatedPlayers[gameState.playerSymbol];
-            
-            // Update Firebase with the new players list
-            return gameRef.child('players').set(updatedPlayers);
-          } 
-          // If we're creator/joiner
-          else if (gameState.isCreator) {
-            const updatedPlayers = { ...players };
-            delete updatedPlayers.creator;
-            return gameRef.child('players').set(updatedPlayers);
-          } else {
-            const updatedPlayers = { ...players };
-            delete updatedPlayers.joiner;
-            return gameRef.child('players').set(updatedPlayers);
-          }
-        })
-        .then(() => {
-          // Unsubscribe from listeners
-          gameRef.off();
-          if (movesRef) movesRef.off();
-          
-          // Reset game state
-          gameState = {
-            roomCode: null,
-            playerSymbol: null,
-            isPlayerTurn: false,
-            gameActive: false,
-            board: Array(9).fill(''),
-            currentTurn: 'X',
-            gameEnded: false,
-            winner: null,
-            playerName: gameState.playerName,
-            isCreator: false,
-            readyState: {
-              creator: false,
-              joiner: false
-            },
-            isQuickGame: false,
-            isAIGame: false
-          };
-          
-          // Update UI
-          gameBoard.classList.remove('active');
-          gameSetup.classList.add('active');
-          roomCodeDisplay.textContent = '-';
-          playerSymbol.textContent = '-';
-          updateStatusMessage('Create a new game or join an existing one');
-          
-          // Reset game board UI
-          boardCells.forEach(cell => {
-            cell.classList.remove('x-move', 'o-move', 'winner');
-          });
-          
-          // If tactical mode exists
-          if (window.tacticalMode) {
-            try {
-              // Reset cells related to tactical mode
-              boardCells.forEach(cell => {
-                cell.classList.remove('shield', 'power-tile', 'bomb-tile', 'swap-tile', 'lock-tile', 'bomb-active');
-              });
-              
-              const tacticalBadge = document.getElementById('tacticalBadge');
-              const actionPanel = document.getElementById('actionPanel');
-              const blitzTimer = document.getElementById('blitzTimer');
-              const gameStats = document.getElementById('gameStats');
-              const replayContainer = document.getElementById('replayContainer');
-              
-              // Use safe access to DOM elements with null checks
-              if (tacticalBadge) tacticalBadge.style.display = 'none';
-              if (actionPanel) actionPanel.classList.remove('active');
-              if (blitzTimer) blitzTimer.style.display = 'none';
-              if (gameStats) gameStats.style.display = 'none';
-              if (replayContainer) replayContainer.style.display = 'none';
-              
-              // Set the game mode safely
-              window.tacticalMode.setGameMode('classic');
-            } catch (error) {
-              console.error('Error cleaning up tactical mode:', error);
-            }
-          }
-          
-          // Hide game action buttons
-          copyRoomBtn.style.display = 'none';
-          exitRoomBtn.style.display = 'none';
-          newGameBtn.style.display = 'none';
-          
-          // Remove ready button if present
-          const readyBtn = document.getElementById('readyBtn');
-          if (readyBtn && readyBtn.parentNode) {
-            readyBtn.parentNode.removeChild(readyBtn);
-          }
-          
-          showNotification('Successfully left the game');
-        })
-        .catch(error => {
-          console.error('Error leaving game:', error);
-          showNotification('Error leaving game: ' + error.message);
-        });
+
+  // Handle the end of the game
+  const handleGameEnd = (winner) => {
+    gameState.gameEnded = true;
+    gameState.winner = winner;
+
+    // Update the UI
+    updateGameStateUI();
+
+    // Show the appropriate notification
+    if (winner === 'draw') {
+      showNotification('Game ended in a draw!');
     } else {
-      // Just reset UI if there's no Firebase connection
-      gameBoard.classList.remove('active');
-      gameSetup.classList.add('active');
-      updateStatusMessage('Create a new game or join an existing one');
-      showNotification('Left the game');
+      // Add winning effects to cells
+      const winningCombination = getWinningCombination();
+      if (winningCombination) {
+        highlightWinningCells(winningCombination);
+        
+        // Add a win line for better visual feedback
+        const type = getWinningType(winningCombination);
+        if (type) {
+          addWinLine(type, winningCombination);
+        }
+      }
+      
+      // Show winner notification with modern effect
+      const winMessage = gameState.isQuickGame ? 
+        (winner === 'X' ? 'You win!' : 'Computer wins!') : 
+        `Player ${winner} wins!`;
+      
+      showNotification(winMessage, 'win');
+    }
+
+    // Update Firebase only if in multiplayer game
+    if (gameState.roomCode && !gameState.isQuickGame) {
+      updateFirebaseGameState();
     }
   };
 
-  // Copy room code to clipboard
-  const copyRoomCode = () => {
-    if (!gameState.roomCode) return;
-    
-    // Use clipboard API
-    navigator.clipboard.writeText(gameState.roomCode)
-      .then(() => {
-        showNotification('Room code copied to clipboard!');
-      })
-      .catch(err => {
-        console.error('Failed to copy room code: ', err);
-        // Fallback
-        const input = document.createElement('input');
-        input.value = gameState.roomCode;
-        document.body.appendChild(input);
-        input.select();
-        document.execCommand('copy');
-        document.body.removeChild(input);
-        showNotification('Room code copied to clipboard!');
-      });
+  // Highlight winning cells
+  const highlightWinningCells = (combination) => {
+    combination.forEach(index => {
+      const cell = document.querySelector(`.board-cell[data-index="${index}"]`);
+      if (cell) {
+        cell.classList.add('winning-cell');
+      }
+    });
   };
 
-  // Toggle dark mode
-  const toggleDarkMode = () => {
-    document.body.classList.toggle('dark-mode');
-    const isDarkMode = document.body.classList.contains('dark-mode');
-    localStorage.setItem('darkMode', isDarkMode);
+  // Get the winning type (horizontal, vertical, diagonal)
+  const getWinningType = (combination) => {
+    // Row wins
+    if (combination[0] % 3 === 0 && combination[1] === combination[0] + 1 && combination[2] === combination[0] + 2) {
+      return { type: 'horizontal', row: Math.floor(combination[0] / 3) };
+    }
+    // Column wins
+    if (combination[0] < 3 && combination[1] === combination[0] + 3 && combination[2] === combination[0] + 6) {
+      return { type: 'vertical', column: combination[0] % 3 };
+    }
+    // Diagonal wins
+    if (combination.includes(0) && combination.includes(4) && combination.includes(8)) {
+      return { type: 'diagonal-1' };
+    }
+    if (combination.includes(2) && combination.includes(4) && combination.includes(6)) {
+      return { type: 'diagonal-2' };
+    }
+    return null;
+  };
+
+  // Add a win line for better visualization
+  const addWinLine = (winType, combination) => {
+    const winLine = document.createElement('div');
+    winLine.classList.add('win-line');
     
-    // Update icon
-    darkModeToggle.innerHTML = isDarkMode 
-      ? '<i class="fas fa-sun"></i>' 
-      : '<i class="fas fa-moon"></i>';
+    const boardElement = document.querySelector('.game-board');
+    if (!boardElement) return;
+    
+    if (winType.type === 'horizontal') {
+      winLine.classList.add('horizontal');
+      winLine.style.top = `${(winType.row * 33.33) + 16.67}%`;
+    } else if (winType.type === 'vertical') {
+      winLine.classList.add('vertical');
+      winLine.style.left = `${(winType.column * 33.33) + 16.67}%`;
+    } else if (winType.type === 'diagonal-1') {
+      winLine.classList.add('diagonal-1');
+    } else if (winType.type === 'diagonal-2') {
+      winLine.classList.add('diagonal-2');
+    }
+    
+    boardElement.appendChild(winLine);
+  };
+
+  // Get the winning combination that caused the win
+  const getWinningCombination = () => {
+    const winPatterns = [
+      [0, 1, 2], [3, 4, 5], [6, 7, 8], // Rows
+      [0, 3, 6], [1, 4, 7], [2, 5, 8], // Columns
+      [0, 4, 8], [2, 4, 6]             // Diagonals
+    ];
+
+    for (const pattern of winPatterns) {
+      const [a, b, c] = pattern;
+      if (
+        gameState.board[a] &&
+        gameState.board[a] === gameState.board[b] &&
+        gameState.board[a] === gameState.board[c]
+      ) {
+        return pattern;
+      }
+    }
+    
+    return null;
   };
 
   // Event Listeners
