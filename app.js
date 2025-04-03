@@ -34,10 +34,7 @@ document.addEventListener('DOMContentLoaded', () => {
       joiner: false
     },
     isQuickGame: false,
-    isAIGame: false,
-    // Add score tracking
-    playerXScore: 0,
-    playerOScore: 0
+    isAIGame: false
   };
 
   // References
@@ -126,19 +123,11 @@ document.addEventListener('DOMContentLoaded', () => {
       // Clear existing classes
       cell.classList.remove('x-move', 'o-move', 'winner');
       
-      // Get the flip-back element inside the cell
-      const flipBack = cell.querySelector('.flip-back');
-      if (flipBack) {
-        // Set the content of the flip-back based on the move
+      // Add appropriate class based on move
       if (gameState.board[index] === 'X') {
-          flipBack.textContent = 'X';
         cell.classList.add('x-move');
       } else if (gameState.board[index] === 'O') {
-          flipBack.textContent = 'O';
         cell.classList.add('o-move');
-        } else {
-          flipBack.textContent = '';
-        }
       }
       
       // Highlight winning cells
@@ -146,41 +135,6 @@ document.addEventListener('DOMContentLoaded', () => {
         cell.classList.add('winner');
       }
     });
-    
-    // Update score display
-    updateScoreDisplay();
-  };
-  
-  // Update score display
-  const updateScoreDisplay = () => {
-    const playerXScoreElement = document.getElementById('playerXScore');
-    const playerOScoreElement = document.getElementById('playerOScore');
-    
-    if (playerXScoreElement) {
-      playerXScoreElement.textContent = gameState.playerXScore;
-    }
-    
-    if (playerOScoreElement) {
-      playerOScoreElement.textContent = gameState.playerOScore;
-    }
-    
-    // Highlight active player's score container
-    const playerXContainer = document.querySelector('.player-score-container.player-x');
-    const playerOContainer = document.querySelector('.player-score-container.player-o');
-    
-    if (playerXContainer && playerOContainer) {
-      if (gameState.currentTurn === 'X') {
-        playerXContainer.classList.add('turn');
-        playerOContainer.classList.remove('turn');
-      } else if (gameState.currentTurn === 'O') {
-        playerOContainer.classList.add('turn');
-        playerXContainer.classList.remove('turn');
-      } else {
-        // No turn active (e.g., game over or not started)
-        playerXContainer.classList.remove('turn');
-        playerOContainer.classList.remove('turn');
-      }
-    }
   };
 
   // Check for a win
@@ -194,13 +148,6 @@ document.addEventListener('DOMContentLoaded', () => {
     for (const pattern of winPatterns) {
       const [a, b, c] = pattern;
       if (board[a] && board[a] === board[b] && board[a] === board[c]) {
-        // Update score for the winner
-        if (board[a] === 'X') {
-          gameState.playerXScore += 1;
-        } else if (board[a] === 'O') {
-          gameState.playerOScore += 1;
-        }
-        
         return {
           winner: board[a],
           line: pattern
@@ -456,17 +403,13 @@ document.addEventListener('DOMContentLoaded', () => {
           players: newPlayers,
           currentTurn: firstTurn,
           status: 'active',
-          gameStartedAt: firebase.database.ServerValue.TIMESTAMP,
-          playerXScore: 0, // Reset scores for new game
-          playerOScore: 0
+          gameStartedAt: firebase.database.ServerValue.TIMESTAMP
         })
         .then(() => {
           // Update local game state
           gameState.playerSymbol = creatorGetsX ? 'X' : 'O';
           gameState.isPlayerTurn = firstTurn === gameState.playerSymbol;
           gameState.currentTurn = firstTurn;
-          gameState.playerXScore = 0;
-          gameState.playerOScore = 0;
           
           // Update UI
           playerSymbol.textContent = gameState.playerSymbol;
@@ -482,9 +425,6 @@ document.addEventListener('DOMContentLoaded', () => {
           } else {
             updateStatusMessage(`${gameState.currentTurn}'s turn`);
           }
-          
-          // Update score display
-          updateScoreDisplay();
           
           showNotification('Game started!');
         })
@@ -774,15 +714,6 @@ document.addEventListener('DOMContentLoaded', () => {
       gameState.gameEnded = data.gameEnded || false;
       gameState.winner = data.winner || null;
       
-      // Update scores
-      if (data.playerXScore !== undefined) {
-        gameState.playerXScore = data.playerXScore;
-      }
-      
-      if (data.playerOScore !== undefined) {
-        gameState.playerOScore = data.playerOScore;
-      }
-      
       // Update player symbol if it changed (after game started)
       if (data.players && (data.players.X || data.players.O)) {
         // If we now have symbols assigned instead of creator/joiner
@@ -822,10 +753,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Enable the creator's ready button when joiner joins
         if (gameState.isCreator && data.readyState.creatorCanStart && readyBtn && readyBtn.disabled) {
           readyBtn.disabled = false;
-          const buttonTop = readyBtn.querySelector('.button-top');
-          if (buttonTop) {
-            buttonTop.textContent = 'Start Game';
-          }
+          readyBtn.textContent = 'Start Game';
           showNotification('Player 2 has joined! Press Start when ready.');
         }
         
@@ -1302,15 +1230,6 @@ document.addEventListener('DOMContentLoaded', () => {
       gameState.gameEnded = data.gameEnded || false;
       gameState.winner = data.winner || null;
       
-      // Update scores
-      if (data.playerXScore !== undefined) {
-        gameState.playerXScore = data.playerXScore;
-      }
-      
-      if (data.playerOScore !== undefined) {
-        gameState.playerOScore = data.playerOScore;
-      }
-      
       // Update turn status
       gameState.isPlayerTurn = gameState.currentTurn === gameState.playerSymbol;
       
@@ -1410,32 +1329,20 @@ document.addEventListener('DOMContentLoaded', () => {
       // Check for win/draw
       const result = checkWin(newBoard);
       
-      // Prepare the update object for Firebase
-      const updateData = {
-        board: newBoard,
-        currentTurn: gameState.playerSymbol === 'X' ? 'O' : 'X',
-        gameEnded: result !== null,
-        winner: result
-      };
-      
-      // Add score updates if there is a winner
-      if (result && result.winner !== 'Draw') {
-        if (result.winner === 'X') {
-          updateData.playerXScore = gameState.playerXScore;
-        } else if (result.winner === 'O') {
-          updateData.playerOScore = gameState.playerOScore;
-        }
-      }
-      
-      // Update Firebase
+      // Update Firebase for quick games
       if (gameRef) {
-        gameRef.update(updateData);
-        
-        // Record the move
-        movesRef.push({
-          player: gameState.playerSymbol,
-          position: index,
-          timestamp: firebase.database.ServerValue.TIMESTAMP
+        gameRef.update({
+          board: newBoard,
+          currentTurn: gameState.playerSymbol === 'X' ? 'O' : 'X',
+          gameEnded: result !== null,
+          winner: result
+        })
+        .then(() => {
+          console.log('Move updated successfully');
+        })
+        .catch(error => {
+          console.error('Error updating move:', error);
+          showNotification('Error: ' + error.message);
         });
       }
       
@@ -1486,26 +1393,14 @@ document.addEventListener('DOMContentLoaded', () => {
     // Check for win/draw
     const result = checkWin(newBoard);
     
-    // Prepare the update object for Firebase
-    const updateData = {
+    // Update Firebase
+    if (gameRef) {
+      gameRef.update({
         board: newBoard,
         currentTurn: gameState.playerSymbol === 'X' ? 'O' : 'X',
         gameEnded: result !== null,
         winner: result
-    };
-    
-    // Add score updates if there is a winner
-    if (result && result.winner !== 'Draw') {
-      if (result.winner === 'X') {
-        updateData.playerXScore = gameState.playerXScore;
-      } else if (result.winner === 'O') {
-        updateData.playerOScore = gameState.playerOScore;
-      }
-    }
-    
-    // Update Firebase
-    if (gameRef) {
-      gameRef.update(updateData);
+      });
       
       // Record the move
       movesRef.push({

@@ -3,49 +3,53 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>XO Online | Modern Tic-Tac-Toe</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <title>XO.GAME - Modern Tic Tac Toe</title>
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="tactical-mode.css">
-    <link rel="icon" href="data:image/svg+xml,<?xml version='1.0' encoding='UTF-8'?><svg width='512' height='512' viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'><defs><linearGradient id='bg-gradient' x1='0%' y1='0%' x2='100%' y2='100%'><stop offset='0%' stop-color='%236366f1' /><stop offset='100%' stop-color='%23ec4899' /></linearGradient></defs><rect width='512' height='512' rx='128' fill='url(%23bg-gradient)' /><path d='M170 130L255 215L340 130L382 172L297 257L382 342L340 384L255 299L170 384L128 342L213 257L128 172L170 130Z' fill='white' /><circle cx='257' cy='257' r='115' stroke='white' stroke-width='30' fill='none' opacity='0.35' /></svg>">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
-    <div class="app-container">
-        <header>
-            <div class="logo-container">
-                <h1 class="logo">XO<span>.GAME</span> <span id="tacticalBadge" class="tactical-badge"><i class="fas fa-bolt"></i>Tactical</span></h1>
-                <button id="darkModeToggle" class="dark-mode-toggle"><i class="fas fa-moon"></i></button>
+    <div class="container">
+        <div class="game-header">
+            <div class="mode-toggle">
+                <button id="darkModeToggle"><i class="fas fa-moon"></i></button>
             </div>
-        </header>
+        </div>
 
-        <div id="gameSetup" class="container">
-            <h2>Welcome to XO</h2>
-            <p>Create a new game or join an existing one</p>
-            
-            <!-- Game Mode Selector -->
-            <div id="gameModeSelector" class="game-mode-selector" data-active="classic">
+        <div class="logo-container">
+            <img src="logo.png" alt="XO Online Logo" class="game-logo">
+        </div>
+
+        <div class="game-status">
+            <div id="statusMessage" class="status-message">Create or Join a game</div>
+            <div id="playerInfo" class="player-info">
+                <div class="player-symbol">You: <span id="playerSymbol">-</span></div>
+                <div class="room-code">Room: <span id="roomCode">-</span></div>
+            </div>
+        </div>
+
+        <div id="gameSetup" class="game-setup active">
+            <div class="game-mode-selector" id="gameModeSelector" data-active="classic">
                 <div class="mode-option active" data-mode="classic">Classic</div>
-                <div class="mode-option" data-mode="tactical">Tactical</div>
+                <div class="mode-option" data-mode="tactical">Tactical Strike</div>
                 <div class="mode-slider"></div>
             </div>
             
-            <!-- Tactical Mode Options -->
-            <div class="tactical-options">
-                <div id="blitzModeToggle" class="mode-toggle">
-                    <label for="blitzModeCheckbox">
+            <div id="blitzModeToggle" class="blitz-toggle">
+                <label class="switch">
                     <input type="checkbox" id="blitzModeCheckbox">
-                        <span class="toggle-label">Blitz Mode</span>
-                        <i class="fas fa-stopwatch"></i>
+                    <span class="slider round"></span>
                 </label>
+                <span>Blitz Mode (10s timer)</span>
             </div>
             
-                <div id="gambitModeToggle" class="mode-toggle">
-                    <label for="gambitModeCheckbox">
+            <div id="gambitModeToggle" class="gambit-toggle">
+                <label class="switch">
                     <input type="checkbox" id="gambitModeCheckbox">
-                        <span class="toggle-label">Gambit Mode</span>
-                        <i class="fas fa-coins"></i>
+                    <span class="slider round"></span>
                 </label>
-                </div>
+                <span>Gambit Mode (Bet coins)</span>
             </div>
             
             <div class="setup-options">
@@ -58,7 +62,7 @@
                 </button>
                 <button id="createGameBtn" class="create-btn">
                     <div class="button-top">
-                    <i class="fas fa-plus-circle"></i> Create New Game
+                        <i class="fas fa-plus-circle"></i> Create New Game
                     </div>
                     <div class="button-bottom"></div>
                     <div class="button-base"></div>
@@ -70,248 +74,181 @@
                     <input type="text" id="joinGameInput" placeholder="Enter room code">
                     <button id="joinGameBtn">
                         <div class="button-top">
-                        <i class="fas fa-sign-in-alt"></i> Join Game
+                            <i class="fas fa-sign-in-alt"></i> Join Game
                         </div>
                         <div class="button-bottom"></div>
                         <div class="button-base"></div>
                     </button>
+                </div>
             </div>
-        </div>
-
+            
             <div class="help-section">
                 <button id="helpBtn" class="help-btn">
                     <div class="button-top">
                         <i class="fas fa-question-circle"></i> How To Play
-                </div>
+                    </div>
                     <div class="button-bottom"></div>
                     <div class="button-base"></div>
                 </button>
             </div>
         </div>
 
-        <div id="gameBoard" class="container">
-            <h2>Game Room: <span id="roomCode">-</span></h2>
-            <p>You are playing as: <span id="playerSymbol">-</span></p>
-            
-            <!-- Score Display -->
-            <div class="score-display">
-                <div class="player-score-container player-x">
-                    <div class="player-name">Player X</div>
-                    <div class="player-score" id="playerXScore">0</div>
+        <div id="gambitSetup" class="gambit-setup">
+            <div class="bet-container">
+                <h3>Place Your Bet</h3>
+                <div class="bet-amount">
+                    <button id="decreaseBet">-</button>
+                    <input type="number" id="betAmount" value="100" min="50" max="1000" step="50">
+                    <button id="increaseBet">+</button>
+                </div>
+                <p>You have <span id="playerCoins">1000</span> coins</p>
+                <button id="confirmBet" class="confirm-bet">Confirm Bet</button>
+            </div>
+        </div>
+
+        <div class="timer-container" id="blitzTimer">
+            <div class="timer-bar" id="timerBar"></div>
+        </div>
+
+        <div class="game-stats" id="gameStats">
+            <div class="player-score player-x active">
+                <span>Player X</span>
+                <div class="score-number" id="playerXScore">0</div>
             </div>
             <div class="score-divider">:</div>
-                <div class="player-score-container player-o">
-                    <div class="player-name">Player O</div>
-                    <div class="player-score" id="playerOScore">0</div>
-                </div>
+            <div class="player-score player-o">
+                <span>Player O</span>
+                <div class="score-number" id="playerOScore">0</div>
+            </div>
         </div>
 
-            <!-- Action Panel for Tactical Mode -->
         <div id="actionPanel" class="action-panel">
-                <button class="action-btn-tactical selected" data-action="strike">
+            <div class="action-btn-tactical selected" data-action="strike">
                 <i class="fas fa-crosshairs"></i>
                 <span>Strike</span>
-                </button>
-                <button class="action-btn-tactical" data-action="defend">
+            </div>
+            <div class="action-btn-tactical" data-action="defend">
                 <i class="fas fa-shield-alt"></i>
                 <span>Defend</span>
-                </button>
-                <button class="action-btn-tactical" data-action="sacrifice">
+            </div>
+            <div class="action-btn-tactical" data-action="sacrifice">
                 <i class="fas fa-exchange-alt"></i>
                 <span>Sacrifice</span>
-                </button>
-            </div>
-            
-            <!-- Blitz Timer -->
-            <div id="blitzTimer" class="blitz-timer">
-                <div class="timer-container">
-                    <div id="timerBar" class="timer-bar"></div>
             </div>
         </div>
 
-            <p id="statusMessage">Create a new game or join an existing one</p>
-            
+        <div id="gameBoard" class="game-board">
             <div class="board-container">
-                <div class="game-board">
-                    <div class="board-cell" data-index="0">
-                        <div class="flip-inner">
-                            <div class="flip-front"></div>
-                            <div class="flip-back"></div>
-                        </div>
-                    </div>
-                    <div class="board-cell" data-index="1">
-                        <div class="flip-inner">
-                            <div class="flip-front"></div>
-                            <div class="flip-back"></div>
-                        </div>
-                    </div>
-                    <div class="board-cell" data-index="2">
-                        <div class="flip-inner">
-                            <div class="flip-front"></div>
-                            <div class="flip-back"></div>
-                        </div>
-                    </div>
-                    <div class="board-cell" data-index="3">
-                        <div class="flip-inner">
-                            <div class="flip-front"></div>
-                            <div class="flip-back"></div>
-                        </div>
-                    </div>
-                    <div class="board-cell" data-index="4">
-                        <div class="flip-inner">
-                            <div class="flip-front"></div>
-                            <div class="flip-back"></div>
-                        </div>
-                    </div>
-                    <div class="board-cell" data-index="5">
-                        <div class="flip-inner">
-                            <div class="flip-front"></div>
-                            <div class="flip-back"></div>
-                        </div>
-                    </div>
-                    <div class="board-cell" data-index="6">
-                        <div class="flip-inner">
-                            <div class="flip-front"></div>
-                            <div class="flip-back"></div>
-                        </div>
-                    </div>
-                    <div class="board-cell" data-index="7">
-                        <div class="flip-inner">
-                            <div class="flip-front"></div>
-                            <div class="flip-back"></div>
-                        </div>
-                    </div>
-                    <div class="board-cell" data-index="8">
-                        <div class="flip-inner">
-                            <div class="flip-front"></div>
-                            <div class="flip-back"></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Game Stats and Replay for Tactical Mode -->
-            <div id="gameStats" class="game-stats">
-                <div class="player-score" id="playerXStats">
-                    <span>Player X</span>
-                    <div class="score-number">0</div>
-                </div>
-                <div class="player-score" id="playerOStats">
-                    <span>Player O</span>
-                    <div class="score-number">0</div>
+                <div class="board-cell" data-index="0"></div>
+                <div class="board-cell" data-index="1"></div>
+                <div class="board-cell" data-index="2"></div>
+                <div class="board-cell" data-index="3"></div>
+                <div class="board-cell" data-index="4"></div>
+                <div class="board-cell" data-index="5"></div>
+                <div class="board-cell" data-index="6"></div>
+                <div class="board-cell" data-index="7"></div>
+                <div class="board-cell" data-index="8"></div>
             </div>
         </div>
 
-            <div id="replayContainer" class="replay-container">
+        <div class="replay-container" id="replayContainer">
             <button id="replayBtn" class="replay-btn">
-                    <i class="fas fa-redo"></i> Replay Last Move
+                <i class="fas fa-history"></i> Replay Last Move
             </button>
             <button id="rematchBtn" class="rematch-btn">
-                    <i class="fas fa-handshake"></i> Request Rematch
+                <i class="fas fa-redo-alt"></i> REMATCH
             </button>
         </div>
 
         <div class="game-actions">
             <button id="copyRoomBtn" class="action-btn">
-                    <div class="button-top">
-                <i class="fas fa-copy"></i> Copy Room Code
-                    </div>
-                    <div class="button-bottom"></div>
-                    <div class="button-base"></div>
+                <div class="button-top">
+                    <i class="fas fa-copy"></i> Copy Room Code
+                </div>
+                <div class="button-bottom"></div>
+                <div class="button-base"></div>
             </button>
             <button id="exitRoomBtn" class="action-btn">
-                    <div class="button-top">
-                <i class="fas fa-sign-out-alt"></i> Exit Room
-                    </div>
-                    <div class="button-bottom"></div>
-                    <div class="button-base"></div>
+                <div class="button-top">
+                    <i class="fas fa-sign-out-alt"></i> Exit Room
+                </div>
+                <div class="button-bottom"></div>
+                <div class="button-base"></div>
             </button>
             <button id="newGameBtn" class="action-btn">
-                    <div class="button-top">
-                <i class="fas fa-redo"></i> New Game
-                    </div>
-                    <div class="button-bottom"></div>
-                    <div class="button-base"></div>
+                <div class="button-top">
+                    <i class="fas fa-redo"></i> New Game
+                </div>
+                <div class="button-bottom"></div>
+                <div class="button-base"></div>
             </button>
+        </div>
+        
+        <div class="action-buttons">
+            <!-- Ready buttons will be added here dynamically -->
         </div>
 
         <div id="notification" class="notification">
             <p id="notificationMessage"></p>
         </div>
     </div>
-        
-        <!-- Help Modal -->
-        <div id="helpModal" class="help-modal">
-            <div class="help-content">
-                <button id="closeHelp" class="help-close"><i class="fas fa-times"></i></button>
-                <h2>How To Play XO.GAME</h2>
-                <p>Welcome to XO.GAME, a modern take on the classic Tic-Tac-Toe with exciting new features and game modes!</p>
-                
-                <h3>Game Modes</h3>
-                
-                <div class="mode-description">
-                    <h4>Classic Mode</h4>
-                    <p>The traditional Tic-Tac-Toe you know and love. Place three of your symbols (X or O) in a row, column, or diagonal to win.</p>
-                </div>
-                
-                <div class="mode-description">
-                    <h4>Tactical Strike Mode</h4>
-                    <p>Take your strategy to the next level with special actions:</p>
-                    <ul class="tactical-features">
-                        <li><i class="fas fa-crosshairs"></i> <strong>Strike:</strong> Place your symbol on the board</li>
-                        <li><i class="fas fa-shield-alt"></i> <strong>Defend:</strong> Place a shield to block your opponent</li>
-                        <li><i class="fas fa-exchange-alt"></i> <strong>Sacrifice:</strong> Give up one of your positions to gain shields</li>
-                    </ul>
-                </div>
-                
-                <h3>Additional Options</h3>
-                
-                <div class="mode-description">
-                    <h4>Blitz Mode</h4>
-                    <p>Adds a 10-second timer for each move. Move quickly or lose your turn!</p>
-                </div>
-                
-                <div class="mode-description">
-                    <h4>Gambit Mode</h4>
-                    <p>Place bets with virtual coins on each game. Winner takes all!</p>
-                </div>
-                
-                <h3>How to Start</h3>
-                <p><strong>Quick Play:</strong> Start an instant game against the computer.</p>
-                <p><strong>Create New Game:</strong> Create a room and share the code with a friend.</p>
-                <p><strong>Join Game:</strong> Enter a room code to join a friend's game.</p>
-                
-                <p>Good luck and have fun!</p>
+    
+    <!-- Help Modal -->
+    <div id="helpModal" class="help-modal">
+        <div class="help-content">
+            <button id="closeHelp" class="help-close"><i class="fas fa-times"></i></button>
+            <h2>How To Play XO.GAME</h2>
+            <p>Welcome to XO.GAME, a modern take on the classic Tic-Tac-Toe with exciting new features and game modes!</p>
+            
+            <h3>Game Modes</h3>
+            
+            <div class="mode-description">
+                <h4>Classic Mode</h4>
+                <p>The traditional Tic-Tac-Toe you know and love. Place three of your symbols (X or O) in a row, column, or diagonal to win.</p>
             </div>
+            
+            <div class="mode-description">
+                <h4>Tactical Strike Mode</h4>
+                <p>Take your strategy to the next level with special actions:</p>
+                <ul class="tactical-features">
+                    <li><i class="fas fa-crosshairs"></i> <strong>Strike:</strong> Place your symbol on the board</li>
+                    <li><i class="fas fa-shield-alt"></i> <strong>Defend:</strong> Place a shield to block your opponent</li>
+                    <li><i class="fas fa-exchange-alt"></i> <strong>Sacrifice:</strong> Give up one of your positions to gain shields</li>
+                </ul>
+            </div>
+            
+            <h3>Additional Options</h3>
+            
+            <div class="mode-description">
+                <h4>Blitz Mode</h4>
+                <p>Adds a 10-second timer for each move. Move quickly or lose your turn!</p>
+            </div>
+            
+            <div class="mode-description">
+                <h4>Gambit Mode</h4>
+                <p>Place bets with virtual coins on each game. Winner takes all!</p>
+            </div>
+            
+            <h3>How to Start</h3>
+            <p><strong>Quick Play:</strong> Start an instant game against the computer.</p>
+            <p><strong>Create New Game:</strong> Create a room and share the code with a friend.</p>
+            <p><strong>Join Game:</strong> Enter a room code to join a friend's game.</p>
+            
+            <p>Good luck and have fun!</p>
         </div>
+    </div>
 
     <footer>
         <p>Made with <i class="fas fa-heart"></i> | © 2025 XO.GAME</p>
     </footer>
-    </div>
 
-    <!-- Firebase -->
+    <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
-    <script>
-        // Firebase configuration
-        const firebaseConfig = {
-            apiKey: "AIzaSyDF8zw59MnWE_ocuV5mAgKBHE2nkNLQRlY",
-            authDomain: "xogame-bf3ae.firebaseapp.com",
-            projectId: "xogame-bf3ae",
-            storageBucket: "xogame-bf3ae.appspot.com",
-            messagingSenderId: "151873022929",
-            appId: "1:151873022929:web:0b3ce0cbb2bc89ac13caed",
-            databaseURL: "https://xogame-bf3ae-default-rtdb.firebaseio.com/"
-        };
-        
-        // Initialize Firebase
-        firebase.initializeApp(firebaseConfig);
-        const database = firebase.database();
-    </script>
     
     <!-- Game Scripts -->
-    <script src="tactical-mode.js"></script>
+    <script src="firebase-config.js"></script>
     <script src="app.js"></script>
+    <script src="tactical-mode.js"></script>
 </body>
 </html> 
