@@ -317,7 +317,16 @@ document.addEventListener('DOMContentLoaded', () => {
           const updateData = {
             status: 'active'
           };
-          updateData[`players.${joinerSymbol}`] = gameState.playerName;
+          updateData.players = {
+            [joinerSymbol]: gameState.playerName
+          };
+          // Get existing players data to preserve other player
+          if (gameData.players) {
+            const existingSymbol = joinerSymbol === 'X' ? 'O' : 'X';
+            if (gameData.players[existingSymbol]) {
+              updateData.players[existingSymbol] = gameData.players[existingSymbol];
+            }
+          }
           
           gameRef.update(updateData)
           .then(() => {
@@ -375,11 +384,14 @@ document.addEventListener('DOMContentLoaded', () => {
             gameRef = database.ref(`games/${roomCode}`);
             movesRef = gameRef.child('moves');
             
-            // Update player info
-            const playerUpdate = {};
-            playerUpdate[availableSymbol] = gameState.playerName;
-            
-            gameRef.child('players').update(playerUpdate)
+            // Update player info - Fix the update method to avoid Firebase path issues
+            gameRef.child('players').once('value')
+              .then((snapshot) => {
+                const currentPlayers = snapshot.val() || {};
+                currentPlayers[availableSymbol] = gameState.playerName;
+                
+                return gameRef.child('players').set(currentPlayers);
+              })
               .then(() => {
                 console.log('Successfully reconnected as player:', availableSymbol);
                 
