@@ -66,7 +66,7 @@ document.addEventListener('DOMContentLoaded', () => {
     copyRoomBtn.style.display = 'none';
     exitRoomBtn.style.display = 'none';
     newGameBtn.style.display = 'none';
-
+    
     // Initialize tactical mode badge as hidden
     if (window.tacticalMode) {
       document.getElementById('tacticalBadge').style.display = 'none';
@@ -244,7 +244,23 @@ document.addEventListener('DOMContentLoaded', () => {
         readyBtn.id = 'readyBtn';
         readyBtn.className = 'action-btn';
         readyBtn.disabled = true;
-        readyBtn.innerHTML = 'Start Game';
+        
+        // Create button elements
+        const buttonTop = document.createElement('div');
+        buttonTop.className = 'button-top';
+        buttonTop.innerHTML = 'Start Game';
+        
+        const buttonBottom = document.createElement('div');
+        buttonBottom.className = 'button-bottom';
+        
+        const buttonBase = document.createElement('div');
+        buttonBase.className = 'button-base';
+        
+        // Append elements to button
+        readyBtn.appendChild(buttonTop);
+        readyBtn.appendChild(buttonBottom);
+        readyBtn.appendChild(buttonBase);
+        
         readyBtn.addEventListener('click', markPlayerReady);
         
         // Find the correct container - handle multiple possibilities
@@ -320,7 +336,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const readyBtn = document.getElementById('readyBtn');
         if (readyBtn) {
           readyBtn.disabled = true;
-          readyBtn.textContent = 'Ready!';
+          // Update button text
+          const buttonTop = readyBtn.querySelector('.button-top');
+          if (buttonTop) {
+            buttonTop.textContent = 'Ready!';
+          }
         }
         
         // If this is the creator and both players are ready, start the game
@@ -543,7 +563,23 @@ document.addEventListener('DOMContentLoaded', () => {
               const readyBtn = document.createElement('button');
               readyBtn.id = 'readyBtn';
               readyBtn.className = 'action-btn';
-              readyBtn.innerHTML = 'Ready!';
+              
+              // Create button elements
+              const buttonTop = document.createElement('div');
+              buttonTop.className = 'button-top';
+              buttonTop.innerHTML = 'Ready!';
+              
+              const buttonBottom = document.createElement('div');
+              buttonBottom.className = 'button-bottom';
+              
+              const buttonBase = document.createElement('div');
+              buttonBase.className = 'button-base';
+              
+              // Append elements to button
+              readyBtn.appendChild(buttonTop);
+              readyBtn.appendChild(buttonBottom);
+              readyBtn.appendChild(buttonBase);
+              
               readyBtn.addEventListener('click', markPlayerReady);
               
               // Find the correct container - handle multiple possibilities
