@@ -1,0 +1,823 @@
+/* Modern XO Game Styles */
+:root {
+  --primary-color: #6c5ce7;
+  --secondary-color: #fd79a8;
+  --bg-color: #f9f9f9;
+  --text-color: #2d3436;
+  --board-color: #ffffff;
+  --cell-border: #e0e0e0;
+  --winner-line: linear-gradient(45deg, var(--primary-color), var(--secondary-color));
+  --shadow-color: rgba(0, 0, 0, 0.1);
+  --btn-hover: #a29bfe;
+  --notification-bg: rgba(0, 0, 0, 0.7);
+  --notification-text: white;
+  --footer-color: #b2bec3;
+
+  /* Dark Mode Variables */
+  --dark-bg-color: #1e272e;
+  --dark-text-color: #f1f1f1;
+  --dark-board-color: #2d3436;
+  --dark-cell-border: #485460;
+  --dark-shadow-color: rgba(0, 0, 0, 0.25);
+}
+
+/* Dark Mode Class */
+.dark-mode {
+  --bg-color: var(--dark-bg-color);
+  --text-color: var(--dark-text-color);
+  --board-color: var(--dark-board-color);
+  --cell-border: var(--dark-cell-border);
+  --shadow-color: var(--dark-shadow-color);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  transition: all 0.3s ease;
+}
+
+body {
+  font-family: 'Poppins', sans-serif;
+  background-color: var(--bg-color);
+  color: var(--text-color);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+}
+
+.container {
+  width: 100%;
+  max-width: 500px;
+  background-color: var(--board-color);
+  border-radius: 20px;
+  box-shadow: 0 10px 30px var(--shadow-color);
+  padding: 30px;
+  overflow: hidden;
+  position: relative;
+}
+
+/* Header */
+.game-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30px;
+}
+
+.game-header h1 {
+  font-size: 2.5rem;
+  font-weight: 700;
+  letter-spacing: -1px;
+}
+
+.x-text {
+  color: var(--primary-color);
+  font-weight: 800;
+}
+
+.o-text {
+  color: var(--secondary-color);
+  font-weight: 800;
+}
+
+.game-text {
+  font-size: 1.8rem;
+  opacity: 0.8;
+}
+
+.mode-toggle button {
+  background: transparent;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: var(--text-color);
+  padding: 5px;
+}
+
+/* Game Status */
+.game-status {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.status-message {
+  font-size: 1.2rem;
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+
+.player-info {
+  display: flex;
+  justify-content: center;
+  gap: 30px;
+  font-size: 0.9rem;
+  opacity: 0.8;
+}
+
+/* Game Setup */
+.game-setup {
+  display: none;
+  margin: 30px 0;
+}
+
+.game-setup.active {
+  display: block;
+}
+
+.setup-options {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.create-btn {
+  background: var(--primary-color);
+  color: white;
+  border: none;
+  padding: 15px;
+  border-radius: 12px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  box-shadow: 0 5px 15px rgba(108, 92, 231, 0.3);
+}
+
+.create-btn:hover {
+  background: var(--btn-hover);
+  transform: translateY(-2px);
+}
+
+.or-divider {
+  display: flex;
+  align-items: center;
+  text-align: center;
+  margin: 10px 0;
+}
+
+.or-divider::before,
+.or-divider::after {
+  content: '';
+  flex: 1;
+  border-bottom: 1px solid var(--cell-border);
+}
+
+.or-divider span {
+  padding: 0 10px;
+  font-size: 0.9rem;
+  color: var(--text-color);
+  opacity: 0.6;
+}
+
+.join-game {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.join-game input {
+  padding: 15px;
+  border-radius: 12px;
+  border: 2px solid var(--cell-border);
+  font-family: 'Poppins', sans-serif;
+  font-size: 1rem;
+  background-color: var(--bg-color);
+  color: var(--text-color);
+}
+
+.join-game input:focus {
+  outline: none;
+  border-color: var(--primary-color);
+}
+
+.join-game button {
+  background: var(--secondary-color);
+  color: white;
+  border: none;
+  padding: 15px;
+  border-radius: 12px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  box-shadow: 0 5px 15px rgba(253, 121, 168, 0.3);
+}
+
+.join-game button:hover {
+  filter: brightness(1.1);
+  transform: translateY(-2px);
+}
+
+/* Game Board */
+.game-board {
+  margin: 20px 0;
+  display: none;
+}
+
+.game-board.active {
+  display: block;
+}
+
+.board-container {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(3, 1fr);
+  gap: 10px;
+  aspect-ratio: 1/1;
+  max-width: 350px;
+  margin: 0 auto;
+}
+
+.board-cell {
+  background-color: var(--board-color);
+  border: 2px solid var(--cell-border);
+  border-radius: 12px;
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 2.5rem;
+  font-weight: 700;
+  position: relative;
+  box-shadow: 0 5px 15px var(--shadow-color);
+}
+
+.board-cell.x-move::before,
+.board-cell.x-move::after {
+  content: '';
+  position: absolute;
+  width: 60%;
+  height: 5px;
+  background: var(--primary-color);
+  border-radius: 5px;
+}
+
+.board-cell.x-move::before {
+  transform: rotate(45deg);
+}
+
+.board-cell.x-move::after {
+  transform: rotate(-45deg);
+}
+
+.board-cell.o-move::before {
+  content: '';
+  position: absolute;
+  width: 60%;
+  height: 60%;
+  border: 5px solid var(--secondary-color);
+  border-radius: 50%;
+}
+
+.board-cell.winner {
+  animation: winner-pulse 1s infinite alternate;
+  background: var(--winner-line);
+  color: white;
+}
+
+@keyframes winner-pulse {
+  from {
+    transform: scale(1);
+  }
+  to {
+    transform: scale(1.05);
+  }
+}
+
+/* Game Actions */
+.game-actions {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  margin-top: 30px;
+}
+
+.action-btn {
+  background: transparent;
+  border: 2px solid var(--cell-border);
+  padding: 10px 20px;
+  border-radius: 50px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-color);
+  transition: all 0.3s ease;
+}
+
+.action-btn:hover {
+  background-color: var(--primary-color);
+  color: white;
+  border-color: var(--primary-color);
+}
+
+/* Notification */
+.notification {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: var(--notification-bg);
+  color: var(--notification-text);
+  padding: 15px 30px;
+  border-radius: 50px;
+  font-size: 1rem;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.3s ease;
+  z-index: 1000;
+}
+
+.notification.show {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* Footer */
+footer {
+  margin-top: 40px;
+  color: var(--footer-color);
+  font-size: 0.9rem;
+  text-align: center;
+}
+
+footer i {
+  color: var(--secondary-color);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .container {
+    padding: 20px;
+    max-width: 400px;
+  }
+  
+  .game-header h1 {
+    font-size: 2rem;
+  }
+  
+  .game-text {
+    font-size: 1.5rem;
+  }
+  
+  .board-cell {
+    font-size: 2rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .container {
+    padding: 15px;
+  }
+  
+  .game-header h1 {
+    font-size: 1.8rem;
+  }
+  
+  .game-text {
+    font-size: 1.3rem;
+  }
+  
+  .player-info {
+    flex-direction: column;
+    gap: 5px;
+  }
+  
+  .action-btn {
+    padding: 8px 15px;
+    font-size: 0.8rem;
+  }
+}
+
+/* Toggle Switch for Game Modes */
+.blitz-toggle,
+.gambit-toggle {
+  display: flex;
+  align-items: center;
+  margin: 10px 0;
+  font-size: 0.9rem;
+}
+
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 50px;
+  height: 24px;
+  margin-right: 10px;
+}
+
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: var(--cell-border);
+  transition: .4s;
+}
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 16px;
+  width: 16px;
+  left: 4px;
+  bottom: 4px;
+  background-color: white;
+  transition: .4s;
+}
+
+input:checked + .slider {
+  background-color: var(--primary-color);
+}
+
+input:checked + .slider:before {
+  transform: translateX(26px);
+}
+
+.slider.round {
+  border-radius: 34px;
+}
+
+.slider.round:before {
+  border-radius: 50%;
+}
+
+/* Hidden elements by default */
+.tactical-badge,
+#gambitSetup,
+#blitzTimer,
+#gameStats,
+#replayContainer {
+  display: none;
+}
+
+/* Gambit Setup */
+.gambit-setup {
+  display: none;
+  margin: 20px 0;
+}
+
+/* Ready System */
+.ready-system {
+  margin: 15px 0;
+  padding: 15px;
+  border-radius: 8px;
+  background-color: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.player-ready-status {
+  display: flex;
+  justify-content: space-around;
+  margin-bottom: 15px;
+}
+
+.player-status {
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-weight: bold;
+  background-color: rgba(0, 0, 0, 0.1);
+}
+
+.player-status .not-ready {
+  color: var(--danger-color);
+}
+
+.player-status .ready {
+  color: var(--success-color);
+}
+
+.ready-actions {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 15px;
+}
+
+.countdown {
+  font-size: 2.5rem;
+  font-weight: bold;
+  color: var(--accent-color);
+  animation: pulse 1s infinite;
+}
+
+.countdown.hidden {
+  display: none;
+}
+
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.2); }
+  100% { transform: scale(1); }
+}
+
+.secondary-btn {
+  padding: 8px 15px;
+  border-radius: 6px;
+  border: none;
+  background-color: var(--secondary-color);
+  color: white;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.secondary-btn:hover {
+  background-color: var(--secondary-hover-color);
+}
+
+.secondary-btn:disabled {
+  background-color: #888;
+  cursor: not-allowed;
+}
+
+.primary-btn:disabled {
+  background-color: #888;
+  cursor: not-allowed;
+}
+
+/* Game Container Layout */
+.game-container {
+  display: flex;
+  gap: 20px;
+  margin: 20px 0;
+}
+
+.game-left-panel {
+  flex: 3;
+}
+
+.game-right-panel {
+  flex: 2;
+}
+
+/* Chat System */
+.chat-container {
+  border-radius: 12px;
+  background-color: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  height: 400px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.chat-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 15px;
+  background-color: var(--primary-color);
+  color: white;
+  border-radius: 12px 12px 0 0;
+}
+
+.chat-header h3 {
+  font-size: 16px;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.chat-controls {
+  display: flex;
+  gap: 5px;
+}
+
+.icon-btn {
+  background: transparent;
+  border: none;
+  color: white;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  width: 30px;
+  height: 30px;
+  transition: all 0.2s ease;
+}
+
+.icon-btn:hover {
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
+.chat-messages {
+  flex: 1;
+  padding: 15px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+.message {
+  padding: 8px 12px;
+  border-radius: 12px;
+  max-width: 80%;
+  word-break: break-word;
+  animation: fadeIn 0.3s;
+  position: relative;
+}
+
+.message.outgoing {
+  align-self: flex-end;
+  background-color: var(--primary-color);
+  color: white;
+  border-bottom-right-radius: 4px;
+}
+
+.message.incoming {
+  align-self: flex-start;
+  background-color: var(--secondary-color);
+  color: white;
+  border-bottom-left-radius: 4px;
+}
+
+.message .sender {
+  font-size: 12px;
+  opacity: 0.8;
+  margin-bottom: 4px;
+  font-weight: bold;
+}
+
+.message .timestamp {
+  font-size: 10px;
+  opacity: 0.7;
+  margin-top: 4px;
+  text-align: right;
+}
+
+.system-message {
+  align-self: center;
+  background-color: rgba(0, 0, 0, 0.1);
+  padding: 5px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  opacity: 0.7;
+  margin: 5px 0;
+}
+
+.chat-input-container {
+  display: flex;
+  padding: 10px;
+  background-color: rgba(255, 255, 255, 0.05);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.chat-input {
+  flex: 1;
+  border: none;
+  background-color: rgba(255, 255, 255, 0.1);
+  color: var(--text-color);
+  padding: 10px 15px;
+  border-radius: 20px;
+  font-family: inherit;
+}
+
+.chat-input:focus {
+  outline: none;
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
+.send-btn {
+  margin-left: 8px;
+  background-color: var(--primary-color);
+  color: white;
+  border: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.send-btn:hover {
+  background-color: var(--btn-hover);
+  transform: scale(1.1);
+}
+
+.quick-messages {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  padding: 10px;
+  background-color: rgba(0, 0, 0, 0.03);
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.quick-msg-btn {
+  background-color: rgba(255, 255, 255, 0.1);
+  border: none;
+  border-radius: 12px;
+  padding: 5px 10px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: var(--text-color);
+}
+
+.quick-msg-btn:hover {
+  background-color: var(--primary-color);
+  color: white;
+}
+
+.voice-chat-container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px;
+  background-color: rgba(0, 0, 0, 0.05);
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.voice-chat-container.hidden {
+  display: none;
+}
+
+.voice-status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+}
+
+.voice-indicator {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background-color: #4CAF50;
+}
+
+.voice-indicator.active {
+  animation: pulse 1s infinite;
+}
+
+.mic-btn {
+  background-color: var(--primary-color);
+  color: white;
+  border: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.mic-btn:hover {
+  transform: scale(1.1);
+}
+
+.mic-btn.muted {
+  background-color: #f44336;
+}
+
+.mic-btn.muted i::before {
+  content: "\f131";
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Responsive Layout for Chat */
+@media (max-width: 768px) {
+  .game-container {
+    flex-direction: column;
+  }
+  
+  .chat-container {
+    height: 300px;
+  }
+} 

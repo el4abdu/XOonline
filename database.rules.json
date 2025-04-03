@@ -1,0 +1,113 @@
+{
+  "rules": {
+    ".read": true,
+    ".write": true,
+    "games": {
+      "$gameId": {
+        ".read": true,
+        ".write": true,
+        "players": {
+          ".read": true,
+          ".write": true
+        },
+        "board": {
+          ".read": true,
+          ".write": true
+        },
+        "moves": {
+          ".read": true,
+          ".write": true,
+          "$moveId": {
+            ".validate": "newData.hasChildren(['player', 'position', 'timestamp'])",
+            "player": {
+              ".validate": "newData.val() === 'X' || newData.val() === 'O'"
+            },
+            "position": {
+              ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() < 9"
+            },
+            "timestamp": {
+              ".validate": "newData.val() <= now"
+            },
+            "tacticalAction": {
+              ".validate": "newData.val() === 'strike' || newData.val() === 'defend' || newData.val() === 'sacrifice' || newData.val() === null"
+            }
+          }
+        },
+        "status": {
+          ".validate": "newData.val() === 'waiting' || newData.val() === 'active' || newData.val() === 'finished'"
+        },
+        "currentTurn": {
+          ".validate": "newData.val() === 'X' || newData.val() === 'O'"
+        },
+        "gameEnded": {
+          ".validate": "newData.isBoolean()"
+        },
+        "gameMode": {
+          ".validate": "newData.val() === 'classic' || newData.val() === 'tactical'"
+        },
+        "isBlitzMode": {
+          ".validate": "newData.isBoolean()"
+        },
+        "isGambitMode": {
+          ".validate": "newData.isBoolean()"
+        },
+        "tacticalState": {
+          ".read": true,
+          ".write": true,
+          "boardState": {
+            ".validate": "newData.hasChildren()"
+          },
+          "powerTiles": {
+            ".read": true,
+            ".write": true
+          },
+          "diagonalWinsX": {
+            ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 2"
+          },
+          "diagonalWinsO": {
+            ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 2"
+          },
+          "playerXScore": {
+            ".validate": "newData.isNumber() && newData.val() >= 0"
+          },
+          "playerOScore": {
+            ".validate": "newData.isNumber() && newData.val() >= 0"
+          }
+        },
+        "gambits": {
+          ".read": true,
+          ".write": true,
+          "playerXBet": {
+            ".validate": "newData.isNumber() && newData.val() >= 0"
+          },
+          "playerOBet": {
+            ".validate": "newData.isNumber() && newData.val() >= 0"
+          }
+        }
+      }
+    },
+    "players": {
+      "$playerId": {
+        ".read": true,
+        ".write": true,
+        "coins": {
+          ".validate": "newData.isNumber() && newData.val() >= 0"
+        },
+        "stats": {
+          "wins": {
+            ".validate": "newData.isNumber() && newData.val() >= 0"
+          },
+          "losses": {
+            ".validate": "newData.isNumber() && newData.val() >= 0"
+          },
+          "draws": {
+            ".validate": "newData.isNumber() && newData.val() >= 0"
+          },
+          "tacticalWins": {
+            ".validate": "newData.isNumber() && newData.val() >= 0"
+          }
+        }
+      }
+    }
+  }
+}

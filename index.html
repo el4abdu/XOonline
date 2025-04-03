@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>XO Game</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="tactical-mode.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>XO<span class="highlight">Game</span></h1>
+            <div id="tacticalBadge" class="badge">Tactical Strike</div>
+            <button id="darkModeToggle" class="icon-btn"><i class="fas fa-moon"></i></button>
+        </header>
+
+        <div id="gameSetup" class="section active">
+            <h2>Game Setup</h2>
+            <div class="setup-options">
+                <div class="input-group">
+                    <label for="playerName">Your Name:</label>
+                    <input type="text" id="playerName" placeholder="Enter your name">
+                </div>
+
+                <div class="mode-selector">
+                    <h3>Game Mode</h3>
+                    <div class="mode-option">
+                        <input type="radio" id="classicMode" name="gameMode" value="classic" checked>
+                        <label for="classicMode">Classic</label>
+                    </div>
+                    <div class="mode-option">
+                        <input type="radio" id="tacticalMode" name="gameMode" value="tactical">
+                        <label for="tacticalMode">Tactical Strike</label>
+                    </div>
+                    
+                    <div id="tacticalOptions" class="tactical-options">
+                        <div class="mode-sub-option">
+                            <input type="checkbox" id="blitzModeCheckbox">
+                            <label for="blitzModeCheckbox">Blitz Mode (10s timer)</label>
+                        </div>
+                        <div class="mode-sub-option">
+                            <input type="checkbox" id="gambitModeCheckbox">
+                            <label for="gambitModeCheckbox">Gambit Mode (wagering)</label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="button-group">
+                    <button id="createGameBtn" class="primary-btn">Create New Game</button>
+                    <div class="or-divider">OR</div>
+                    <div class="join-group">
+                        <input type="text" id="joinGameInput" placeholder="Enter Room Code">
+                        <button id="joinGameBtn" class="primary-btn">Join Game</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="gameBoard" class="section">
+            <div class="game-info">
+                <div class="info-box">
+                    <div>Room: <span id="roomCode">-</span></div>
+                    <div>You are: <span id="playerSymbol">-</span></div>
+                </div>
+                <div id="statusMessage" class="status-message">Waiting for another player...</div>
+                <div id="gameReadySystem" class="ready-system">
+                    <div class="player-ready-status">
+                        <div id="player1Status" class="player-status">
+                            <span id="player1Name">Player 1</span>: <span id="player1Ready">Not Ready</span>
+                        </div>
+                        <div id="player2Status" class="player-status">
+                            <span id="player2Name">Player 2</span>: <span id="player2Ready">Not Ready</span>
+                        </div>
+                    </div>
+                    <div class="ready-actions">
+                        <button id="readyBtn" class="secondary-btn">I'm Ready</button>
+                        <button id="startGameBtn" class="primary-btn" disabled>Start Game</button>
+                        <div id="countdown" class="countdown hidden">3</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="game-container">
+                <div class="game-left-panel">
+                    <div id="blitzTimer" class="blitz-timer"><span id="timerValue">10</span>s</div>
+                    
+                    <div id="gameStats" class="game-stats">
+                        <div class="stat-item">Shields: <span id="shieldCount">0</span></div>
+                        <div class="stat-item">Power Tiles: <span id="powerTileCount">0</span></div>
+                        <div class="stat-item">Points: <span id="pointsCount">0</span></div>
+                    </div>
+
+                    <div class="board-container">
+                        <div class="board">
+                            <div class="board-cell" data-cell="0"></div>
+                            <div class="board-cell" data-cell="1"></div>
+                            <div class="board-cell" data-cell="2"></div>
+                            <div class="board-cell" data-cell="3"></div>
+                            <div class="board-cell" data-cell="4"></div>
+                            <div class="board-cell" data-cell="5"></div>
+                            <div class="board-cell" data-cell="6"></div>
+                            <div class="board-cell" data-cell="7"></div>
+                            <div class="board-cell" data-cell="8"></div>
+                        </div>
+                    </div>
+
+                    <div id="actionPanel" class="action-panel">
+                        <div class="action-title">Tactical Actions</div>
+                        <div class="action-buttons">
+                            <button id="strikeBtn" class="action-btn active">
+                                <i class="fas fa-crosshairs"></i> Strike
+                            </button>
+                            <button id="defendBtn" class="action-btn">
+                                <i class="fas fa-shield-alt"></i> Defend
+                            </button>
+                            <button id="sacrificeBtn" class="action-btn">
+                                <i class="fas fa-skull"></i> Sacrifice
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="replayContainer" class="replay-container">
+                        <div class="replay-title">Last Move Replay</div>
+                        <div id="replayBoard" class="mini-board"></div>
+                    </div>
+                </div>
+                
+                <div class="game-right-panel">
+                    <div class="chat-container">
+                        <div class="chat-header">
+                            <h3><i class="fas fa-comments"></i> Game Chat</h3>
+                            <div class="chat-controls">
+                                <button id="voiceChatBtn" class="icon-btn" title="Voice Chat">
+                                    <i class="fas fa-microphone"></i>
+                                </button>
+                                <button id="toggleChatBtn" class="icon-btn" title="Toggle Chat">
+                                    <i class="fas fa-chevron-up"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="chat-messages" id="chatMessages">
+                            <div class="system-message">Welcome to the game chat!</div>
+                        </div>
+                        <div class="chat-input-container">
+                            <input type="text" id="chatInput" placeholder="Type a message..." class="chat-input">
+                            <button id="sendChatBtn" class="send-btn">
+                                <i class="fas fa-paper-plane"></i>
+                            </button>
+                        </div>
+                        
+                        <div id="quickMessages" class="quick-messages">
+                            <button class="quick-msg-btn" data-msg="Good game!">Good game!</button>
+                            <button class="quick-msg-btn" data-msg="Nice move!">Nice move!</button>
+                            <button class="quick-msg-btn" data-msg="Your turn!">Your turn!</button>
+                            <button class="quick-msg-btn" data-msg="I'm thinking...">I'm thinking...</button>
+                            <button class="quick-msg-btn" data-msg="Let's play again!">Let's play again!</button>
+                        </div>
+                        
+                        <div id="voiceChat" class="voice-chat-container hidden">
+                            <div class="voice-status">
+                                <span id="voiceStatus">Voice chat ready</span>
+                                <div id="voiceIndicator" class="voice-indicator"></div>
+                            </div>
+                            <button id="toggleMicBtn" class="mic-btn active">
+                                <i class="fas fa-microphone"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="game-actions">
+                <button id="copyRoomBtn" class="action-btn">
+                    <i class="fas fa-copy"></i> Copy Room Code
+                </button>
+                <button id="exitRoomBtn" class="action-btn">
+                    <i class="fas fa-sign-out-alt"></i> Exit Room
+                </button>
+                <button id="newGameBtn" class="action-btn">
+                    <i class="fas fa-redo"></i> New Game
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="notification" class="notification">
+        <div id="notificationMessage"></div>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+    <script src="firebase-config.js"></script>
+    <script src="tactical-mode.js"></script>
+    <script src="app.js"></script>
+    <script src="chat.js"></script>
+</body>
+</html> 
