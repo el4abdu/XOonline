@@ -131,21 +131,21 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
     
-    // Show/hide tactical elements
+    // Show/hide tactical elements - with null checks
     if (mode === 'tactical') {
-      tacticalBadge.style.display = 'inline-flex';
-      blitzModeToggle.style.display = 'flex';
-      gambitModeToggle.style.display = 'flex';
+      if (tacticalBadge) tacticalBadge.style.display = 'inline-flex';
+      if (blitzModeToggle) blitzModeToggle.style.display = 'flex';
+      if (gambitModeToggle) gambitModeToggle.style.display = 'flex';
     } else {
-      tacticalBadge.style.display = 'none';
-      blitzModeToggle.style.display = 'none';
-      gambitModeToggle.style.display = 'none';
-      blitzModeCheckbox.checked = false;
-      gambitModeCheckbox.checked = false;
+      if (tacticalBadge) tacticalBadge.style.display = 'none';
+      if (blitzModeToggle) blitzModeToggle.style.display = 'none';
+      if (gambitModeToggle) gambitModeToggle.style.display = 'none';
+      if (blitzModeCheckbox) blitzModeCheckbox.checked = false;
+      if (gambitModeCheckbox) gambitModeCheckbox.checked = false;
       tacticalState.isBlitzMode = false;
       tacticalState.isGambitMode = false;
-      blitzTimer.style.display = 'none';
-      gameStats.style.display = 'none';
+      if (blitzTimer) blitzTimer.style.display = 'none';
+      if (gameStats) gameStats.style.display = 'none';
     }
   };
   

@@ -30,11 +30,5 @@ database.ref('.info/connected').on('value', (snapshot) => {
 // Export for use in other files
 window.database = database;
 
-// Set persistence to improve offline capability
-firebase.database().setPersistence('session')
-  .then(() => {
-    console.log('Firebase persistence set to session');
-  })
-  .catch((error) => {
-    console.error('Firebase persistence error:', error);
-  }); 
+// Note: setPersistence is not available in Firebase Realtime Database JavaScript SDK v8
+// To enable offline capabilities, we would need to use Firebase 9+ with proper imports 

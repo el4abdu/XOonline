@@ -219,7 +219,17 @@ document.addEventListener('DOMContentLoaded', () => {
         readyBtn.disabled = true;
         readyBtn.innerHTML = 'Start Game';
         readyBtn.addEventListener('click', markPlayerReady);
-        document.querySelector('.action-buttons').appendChild(readyBtn);
+        
+        // Find the correct container - handle multiple possibilities
+        const actionButtonsContainer = document.querySelector('.action-buttons') || 
+                                       document.querySelector('.game-actions');
+        
+        if (actionButtonsContainer) {
+          actionButtonsContainer.appendChild(readyBtn);
+        } else {
+          // Fallback - append to gameBoard
+          document.getElementById('gameBoard').appendChild(readyBtn);
+        }
         
         // Initialize tactical mode if needed
         if (isTacticalMode) {
@@ -481,7 +491,17 @@ document.addEventListener('DOMContentLoaded', () => {
             readyBtn.className = 'action-btn';
             readyBtn.innerHTML = 'Ready!';
             readyBtn.addEventListener('click', markPlayerReady);
-            document.querySelector('.action-buttons').appendChild(readyBtn);
+            
+            // Find the correct container - handle multiple possibilities
+            const actionButtonsContainer = document.querySelector('.action-buttons') || 
+                                           document.querySelector('.game-actions');
+            
+            if (actionButtonsContainer) {
+              actionButtonsContainer.appendChild(readyBtn);
+            } else {
+              // Fallback - append to gameBoard
+              document.getElementById('gameBoard').appendChild(readyBtn);
+            }
             
             // Initialize tactical mode if needed
             if (gameData.gameMode === 'tactical' && window.tacticalMode) {

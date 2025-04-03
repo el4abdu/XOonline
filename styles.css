@@ -337,6 +337,14 @@ body {
   margin-top: 30px;
 }
 
+/* Action Buttons Container - For Ready/Start Buttons */
+.action-buttons {
+  display: flex;
+  justify-content: center;
+  margin-top: 20px;
+  width: 100%;
+}
+
 .action-btn {
   background: transparent;
   border: 2px solid var(--cell-border);
