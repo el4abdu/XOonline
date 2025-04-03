@@ -4,698 +4,450 @@
  * dynamic win conditions, power tiles, and more.
  */
 
-// Wait for the DOM to be fully loaded
-document.addEventListener('DOMContentLoaded', () => {
-  
-  // DOM Elements
-  const gameModeSelector = document.getElementById('gameModeSelector');
-  const modeOptions = document.querySelectorAll('.mode-option');
-  const tacticalBadge = document.getElementById('tacticalBadge');
-  const actionPanel = document.getElementById('actionPanel');
-  const actionButtons = document.querySelectorAll('.action-btn-tactical');
-  const blitzModeToggle = document.getElementById('blitzModeToggle');
-  const blitzModeCheckbox = document.getElementById('blitzModeCheckbox');
-  const blitzTimer = document.getElementById('blitzTimer');
-  const timerBar = document.getElementById('timerBar');
-  const gambitModeToggle = document.getElementById('gambitModeToggle');
-  const gambitModeCheckbox = document.getElementById('gambitModeCheckbox');
-  const gambitSetup = document.getElementById('gambitSetup');
-  const gameStats = document.getElementById('gameStats');
-  const replayContainer = document.getElementById('replayContainer');
-  const replayBtn = document.getElementById('replayBtn');
-  const rematchBtn = document.getElementById('rematchBtn');
-  const boardCells = document.querySelectorAll('.board-cell');
-  const playerXScore = document.getElementById('playerXScore');
-  const playerOScore = document.getElementById('playerOScore');
-  
-  // Game state extension for tactical mode
-  const tacticalState = {
-    gameMode: 'classic', // 'classic' or 'tactical'
-    isBlitzMode: false,
-    isGambitMode: false,
-    currentAction: 'strike', // 'strike', 'defend', or 'sacrifice'
-    sacrificeMade: false,
-    shieldCount: 0,
-    diagonalWinsX: 0,
-    diagonalWinsO: 0,
-    powerTiles: [],
-    bombs: {},
-    lastMove: null,
-    playerXScore: 0,
-    playerOScore: 0,
-    playerCoins: 1000,
-    opponentCoins: 1000,
-    betAmount: 100,
-    timerInterval: null,
-    timeLeft: 10,
-    canPlaceShields: 0, // Number of shields player can place after sacrifice
-    boardState: Array(9).fill(null) // Separate from gameState.board for tactical-specific states
-  };
-  
-  // Initialize tactical mode
-  const initTacticalMode = () => {
-    // Set up event listeners for game mode selector
-    modeOptions.forEach(option => {
-      option.addEventListener('click', () => {
-        const mode = option.getAttribute('data-mode');
-        setGameMode(mode);
-      });
-    });
+// Tactical Mode for XO.GAME
+const tacticalMode = (function() {
+    // DOM Elements
+    const actionPanel = document.getElementById('actionPanel');
+    const tacticalBadge = document.getElementById('tacticalBadge');
+    const gameModeSelector = document.getElementById('gameModeSelector');
+    const blitzToggle = document.getElementById('blitzModeToggle');
+    const gambitToggle = document.getElementById('gambitModeToggle');
+    const blitzTimer = document.getElementById('blitzTimer');
+    const timerBar = document.getElementById('timerBar');
+    const replayBtn = document.getElementById('replayBtn');
+    const gameStats = document.getElementById('gameStats');
     
-    // Set up event listeners for action buttons
-    actionButtons.forEach(button => {
-      button.addEventListener('click', () => {
-        const action = button.getAttribute('data-action');
-        setCurrentAction(action);
-      });
-    });
-    
-    // Blitz mode toggle
-    blitzModeCheckbox.addEventListener('change', () => {
-      tacticalState.isBlitzMode = blitzModeCheckbox.checked;
-      if (tacticalState.isBlitzMode) {
-        blitzTimer.style.display = 'block';
-        gameStats.style.display = 'flex';
-      } else {
-        blitzTimer.style.display = 'none';
-        gameStats.style.display = 'none';
-      }
-    });
-    
-    // Gambit mode toggle
-    gambitModeCheckbox.addEventListener('change', () => {
-      tacticalState.isGambitMode = gambitModeCheckbox.checked;
-    });
-    
-    // Bet amount controls
-    document.getElementById('decreaseBet').addEventListener('click', () => {
-      const betInput = document.getElementById('betAmount');
-      let currentBet = parseInt(betInput.value);
-      currentBet = Math.max(50, currentBet - 50);
-      betInput.value = currentBet;
-      tacticalState.betAmount = currentBet;
-    });
-    
-    document.getElementById('increaseBet').addEventListener('click', () => {
-      const betInput = document.getElementById('betAmount');
-      let currentBet = parseInt(betInput.value);
-      currentBet = Math.min(1000, currentBet + 50);
-      betInput.value = currentBet;
-      tacticalState.betAmount = currentBet;
-    });
-    
-    document.getElementById('betAmount').addEventListener('change', (e) => {
-      tacticalState.betAmount = parseInt(e.target.value);
-    });
-    
-    document.getElementById('confirmBet').addEventListener('click', confirmBet);
-    
-    // Replay button
-    replayBtn.addEventListener('click', replayLastMove);
-    
-    // Rematch button
-    rematchBtn.addEventListener('click', requestRematch);
-  };
-  
-  // Set the game mode (classic or tactical)
-  const setGameMode = (mode) => {
-    tacticalState.gameMode = mode;
-    
-    // Update UI
-    gameModeSelector.setAttribute('data-active', mode);
-    modeOptions.forEach(option => {
-      if (option.getAttribute('data-mode') === mode) {
-        option.classList.add('active');
-      } else {
-        option.classList.remove('active');
-      }
-    });
-    
-    // Show/hide tactical elements - with null checks
-    if (mode === 'tactical') {
-      if (tacticalBadge) tacticalBadge.style.display = 'inline-flex';
-      if (blitzModeToggle) blitzModeToggle.style.display = 'flex';
-      if (gambitModeToggle) gambitModeToggle.style.display = 'flex';
-    } else {
-      if (tacticalBadge) tacticalBadge.style.display = 'none';
-      if (blitzModeToggle) blitzModeToggle.style.display = 'none';
-      if (gambitModeToggle) gambitModeToggle.style.display = 'none';
-      if (blitzModeCheckbox) blitzModeCheckbox.checked = false;
-      if (gambitModeCheckbox) gambitModeCheckbox.checked = false;
-      tacticalState.isBlitzMode = false;
-      tacticalState.isGambitMode = false;
-      if (blitzTimer) blitzTimer.style.display = 'none';
-      if (gameStats) gameStats.style.display = 'none';
-    }
-  };
-  
-  // Set the current action in tactical mode
-  const setCurrentAction = (action) => {
-    // Check if this action is valid given the current state
-    if (action === 'sacrifice' && tacticalState.sacrificeMade) {
-      showNotification('You have already made a sacrifice this game!');
-      return;
-    }
-    
-    if (action === 'defend' && tacticalState.canPlaceShields <= 0 && tacticalState.currentAction !== 'sacrifice') {
-      showNotification('Use sacrifice first to gain shields!');
-      return;
-    }
-    
-    tacticalState.currentAction = action;
-    
-    // Update UI
-    actionButtons.forEach(button => {
-      if (button.getAttribute('data-action') === action) {
-        button.classList.add('selected');
-      } else {
-        button.classList.remove('selected');
-      }
-    });
-    
-    updateStatusMessage();
-  };
-  
-  // Make a move in tactical mode
-  const makeTacticalMove = (index) => {
-    // Get the current player symbol from the main game state
-    const symbol = window.gameState.playerSymbol;
-    
-    // Get the cell element
-    const cell = boardCells[index];
-    
-    if (tacticalState.boardState[index]) {
-      showNotification('This cell is already occupied!');
-      return false;
-    }
-    
-    // Execute different actions based on the current action
-    switch (tacticalState.currentAction) {
-      case 'strike':
-        return placeSymbol(index, symbol);
-      case 'defend':
-        return placeShield(index);
-      case 'sacrifice':
-        return makeSacrifice(index, symbol);
-      default:
-        return false;
-    }
-  };
-  
-  // Place a symbol on the board (Strike action)
-  const placeSymbol = (index, symbol) => {
-    const cell = boardCells[index];
-    
-    // Check if the cell has a shield or power tile
-    if (cell.classList.contains('shield')) {
-      showNotification('This cell is protected by a shield!');
-      return false;
-    }
-    
-    if (cell.classList.contains('lock-tile')) {
-      showNotification('This cell is locked!');
-      return false;
-    }
-    
-    // Place the symbol
-    tacticalState.boardState[index] = symbol;
-    
-    // Add class for visual
-    cell.classList.add(symbol === 'X' ? 'x-move' : 'o-move');
-    
-    // Save the last move for replay
-    tacticalState.lastMove = {
-      index,
-      action: 'strike',
-      symbol
+    // Tactical Mode State
+    const state = {
+        gameMode: 'classic', // 'classic' or 'tactical'
+        currentAction: 'strike', // 'strike', 'defend', or 'sacrifice'
+        blitzMode: false,
+        gambitMode: false,
+        timerDuration: 10, // seconds
+        timerInterval: null,
+        timeRemaining: 0,
+        lastMoves: [],
+        playerShields: {
+            X: 0,
+            O: 0
+        },
+        playerPower: {
+            X: 100,
+            O: 100
+        },
+        sacrificePositions: {
+            X: [],
+            O: []
+        }
     };
     
-    // Handle bomb tiles
-    if (cell.classList.contains('bomb-tile')) {
-      activateBomb(index);
-    }
-    
-    // Handle swap tiles
-    if (cell.classList.contains('swap-tile')) {
-      activateSwap(index, symbol);
-    }
-    
-    // Check for win after the move
-    checkTacticalWin();
-    
-    // Move successful
-    return true;
-  };
-  
-  // Place a shield on the board (Defend action)
-  const placeShield = (index) => {
-    if (tacticalState.canPlaceShields <= 0) {
-      showNotification('You have no shields to place!');
-      return false;
-    }
-    
-    const cell = boardCells[index];
-    
-    // Check if cell is empty
-    if (tacticalState.boardState[index] || cell.classList.contains('shield')) {
-      showNotification('Cannot place shield here!');
-      return false;
-    }
-    
-    // Place the shield
-    tacticalState.boardState[index] = 'shield';
-    tacticalState.canPlaceShields--;
-    
-    // Add class for visual
-    cell.classList.add('shield');
-    
-    // Play animation
-    cell.style.animation = 'defend-animation var(--move-animation-duration)';
-    setTimeout(() => {
-      cell.style.animation = '';
-    }, 400);
-    
-    // Save the last move for replay
-    tacticalState.lastMove = {
-      index,
-      action: 'defend'
-    };
-    
-    // Update UI
-    updateStatusMessage();
-    
-    // If this was the last shield to place, reset to strike action
-    if (tacticalState.canPlaceShields === 0) {
-      setCurrentAction('strike');
-    }
-    
-    return true;
-  };
-  
-  // Make a sacrifice (Sacrifice action)
-  const makeSacrifice = (index, symbol) => {
-    const cell = boardCells[index];
-    
-    // Can only sacrifice your own symbol
-    if (tacticalState.boardState[index] !== symbol) {
-      showNotification('You can only sacrifice your own symbol!');
-      return false;
-    }
-    
-    // Execute the sacrifice
-    tacticalState.boardState[index] = null;
-    cell.classList.remove('x-move', 'o-move');
-    
-    // Grant 2 shields to place
-    tacticalState.canPlaceShields = 2;
-    tacticalState.sacrificeMade = true;
-    
-    // Save the last move for replay
-    tacticalState.lastMove = {
-      index,
-      action: 'sacrifice',
-      symbol
-    };
-    
-    // Switch to defend action automatically
-    setCurrentAction('defend');
-    
-    showNotification('Sacrifice made! Place 2 shields.');
-    return true;
-  };
-  
-  // Activate a bomb tile
-  const activateBomb = (index) => {
-    const cell = boardCells[index];
-    cell.classList.add('bomb-active');
-    
-    // Bomb will explode after 3 turns
-    tacticalState.bombs[index] = 3;
-    
-    showNotification('Bomb activated! Will explode in 3 turns.');
-  };
-  
-  // Activate a swap tile
-  const activateSwap = (index, symbol) => {
-    showNotification('Swap tile activated! Choose an opponent\'s symbol to swap with.');
-    
-    // Here we would implement a selection mode for the player to choose
-    // which opponent symbol to swap with. For simplicity, we'll just
-    // choose the first opponent symbol found
-    
-    const oppositeSymbol = symbol === 'X' ? 'O' : 'X';
-    
-    let oppositeIndex = -1;
-    tacticalState.boardState.forEach((cellValue, idx) => {
-      if (cellValue === oppositeSymbol && oppositeIndex === -1) {
-        oppositeIndex = idx;
-      }
-    });
-    
-    if (oppositeIndex !== -1) {
-      // Swap the symbols
-      tacticalState.boardState[oppositeIndex] = symbol;
-      tacticalState.boardState[index] = oppositeSymbol;
-      
-      // Update visuals
-      boardCells[oppositeIndex].classList.remove('o-move', 'x-move');
-      boardCells[oppositeIndex].classList.add(symbol === 'X' ? 'x-move' : 'o-move');
-      
-      boardCells[index].classList.remove('o-move', 'x-move');
-      boardCells[index].classList.add(oppositeSymbol === 'X' ? 'x-move' : 'o-move');
-      
-      showNotification('Symbols swapped!');
-    }
-  };
-  
-  // Check for win in tactical mode
-  const checkTacticalWin = () => {
-    if (tacticalState.gameMode !== 'tactical') {
-      return null; // Use regular win checking from main game
-    }
-    
-    // Win patterns
-    const winPatterns = [
-      [0, 1, 2], [3, 4, 5], [6, 7, 8], // Rows
-      [0, 3, 6], [1, 4, 7], [2, 5, 8], // Columns
-      [0, 4, 8], [2, 4, 6]             // Diagonals
-    ];
-    
-    // In tactical mode, diagonal wins are special
-    const diagonalPatterns = [[0, 4, 8], [2, 4, 6]];
-    
-    for (const pattern of winPatterns) {
-      const [a, b, c] = pattern;
-      if (
-        tacticalState.boardState[a] &&
-        tacticalState.boardState[a] !== 'shield' &&
-        tacticalState.boardState[a] === tacticalState.boardState[b] &&
-        tacticalState.boardState[a] === tacticalState.boardState[c]
-      ) {
-        const winningSymbol = tacticalState.boardState[a];
+    // Initialize tactical mode
+    const init = () => {
+        // Hide tactical UI elements by default
+        if (actionPanel) actionPanel.style.display = 'none';
+        if (tacticalBadge) tacticalBadge.style.display = 'none';
+        if (blitzTimer) blitzTimer.style.display = 'none';
+        if (gameStats) gameStats.style.display = 'none';
+        if (replayBtn) replayBtn.style.display = 'none';
         
-        // Check if this is a diagonal win
-        const isDiagonal = diagonalPatterns.some(diag => 
-          JSON.stringify(diag) === JSON.stringify(pattern)
-        );
+        // Setup event listeners
+        setupEventListeners();
         
-        if (isDiagonal) {
-          // Handle diagonal win in tactical mode
-          if (winningSymbol === 'X') {
-            tacticalState.diagonalWinsX++;
-            showNotification('Player X scored a diagonal win!');
-          } else {
-            tacticalState.diagonalWinsO++;
-            showNotification('Player O scored a diagonal win!');
-          }
-          
-          // Add win indicator visually
-          const boardContainer = document.querySelector('.board-container');
-          const indicator = document.createElement('div');
-          indicator.className = `diagonal-win-indicator ${pattern[0] === 2 ? 'secondary' : ''}`;
-          boardContainer.appendChild(indicator);
-          
-          // Check if player has 2 diagonal wins for tactical win
-          if (tacticalState.diagonalWinsX >= 2) {
-            endTacticalGame('X');
-            return 'X';
-          }
-          
-          if (tacticalState.diagonalWinsO >= 2) {
-            endTacticalGame('O');
-            return 'O';
-          }
-          
-          // Reset the board for next round, but keep diagonal win count
-          setTimeout(() => {
-            resetBoardOnly();
-          }, 1500);
-          
-          return null; // Game continues, no overall winner yet
+        console.log('Tactical mode initialized');
+    };
+    
+    // Setup event listeners for tactical mode
+    const setupEventListeners = () => {
+        // Game mode selection
+        if (gameModeSelector) {
+            const modeOptions = gameModeSelector.querySelectorAll('.mode-option');
+            const modeSlider = gameModeSelector.querySelector('.mode-slider');
+            
+            modeOptions.forEach(option => {
+                option.addEventListener('click', () => {
+                    // Update active class
+                    modeOptions.forEach(opt => opt.classList.remove('active'));
+                    option.classList.add('active');
+                    
+                    // Move slider
+                    if (modeSlider) {
+                        const index = Array.from(modeOptions).indexOf(option);
+                        modeSlider.style.transform = `translateX(${index * 100}%)`;
+                    }
+                    
+                    // Update game mode
+                    state.gameMode = option.dataset.mode;
+                    gameModeSelector.dataset.active = state.gameMode;
+                    
+                    // Show/hide tactical options
+                    toggleTacticalOptions(state.gameMode === 'tactical');
+                });
+            });
         }
         
-        // Regular win in any pattern
-        endTacticalGame(winningSymbol);
-        return winningSymbol;
-      }
-    }
+        // Blitz mode toggle
+        if (blitzToggle) {
+            const checkbox = blitzToggle.querySelector('input[type="checkbox"]');
+            if (checkbox) {
+                checkbox.addEventListener('change', () => {
+                    state.blitzMode = checkbox.checked;
+                    console.log('Blitz mode:', state.blitzMode);
+                });
+            }
+        }
+        
+        // Gambit mode toggle
+        if (gambitToggle) {
+            const checkbox = gambitToggle.querySelector('input[type="checkbox"]');
+            if (checkbox) {
+                checkbox.addEventListener('change', () => {
+                    state.gambitMode = checkbox.checked;
+                    console.log('Gambit mode:', state.gambitMode);
+                });
+            }
+        }
+        
+        // Action panel buttons
+        if (actionPanel) {
+            const actionButtons = actionPanel.querySelectorAll('.action-btn-tactical');
+            actionButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    // Update selected action
+                    actionButtons.forEach(btn => btn.classList.remove('selected'));
+                    button.classList.add('selected');
+                    state.currentAction = button.dataset.action;
+                    
+                    console.log('Selected action:', state.currentAction);
+                });
+            });
+        }
+        
+        // Replay button
+        if (replayBtn) {
+            replayBtn.addEventListener('click', replayLastMove);
+        }
+    };
     
-    // Check for a draw - board is full
-    if (!tacticalState.boardState.some(cell => cell === null || cell === undefined)) {
-      endTacticalGame('Draw');
-      return 'Draw';
-    }
+    // Toggle tactical options visibility
+    const toggleTacticalOptions = (show) => {
+        const tacticalOptions = document.querySelector('.tactical-options');
+        if (tacticalOptions) {
+            tacticalOptions.style.display = show ? 'flex' : 'none';
+        }
+    };
     
-    // No win yet
-    return null;
-  };
-  
-  // End the tactical game
-  const endTacticalGame = (result) => {
-    if (result === 'X') {
-      tacticalState.playerXScore++;
-      playerXScore.textContent = tacticalState.playerXScore;
-      showNotification('Player X wins the game!');
-    } else if (result === 'O') {
-      tacticalState.playerOScore++;
-      playerOScore.textContent = tacticalState.playerOScore;
-      showNotification('Player O wins the game!');
-    } else {
-      showNotification('Game ended in a draw!');
-    }
+    // Start tactical game mode
+    const startTacticalGame = () => {
+        if (state.gameMode !== 'tactical') return;
+        
+        // Show tactical UI elements
+        if (actionPanel) actionPanel.style.display = 'flex';
+        if (tacticalBadge) tacticalBadge.style.display = 'inline-block';
+        if (gameStats) gameStats.style.display = 'flex';
+        
+        // Reset tactical state
+        state.playerShields = { X: 2, O: 2 };
+        state.playerPower = { X: 100, O: 100 };
+        state.sacrificePositions = { X: [], O: [] };
+        state.lastMoves = [];
+        
+        // Start blitz timer if enabled
+        if (state.blitzMode) {
+            startBlitzTimer();
+        }
+        
+        console.log('Tactical game started');
+    };
     
-    // Handle Blitz mode score tracking for best-of-5
-    if (tacticalState.isBlitzMode) {
-      if (tacticalState.playerXScore >= 3) {
-        showNotification('Player X wins the match!');
-        // Handle rewards, etc.
-      } else if (tacticalState.playerOScore >= 3) {
-        showNotification('Player O wins the match!');
-        // Handle rewards, etc.
-      } else {
-        // Continue the match with a new game
-        setTimeout(() => {
-          resetBoardOnly();
-        }, 2000);
-      }
-    }
+    // Start blitz timer
+    const startBlitzTimer = () => {
+        if (!state.blitzMode || !blitzTimer) return;
+        
+        // Show timer
+        blitzTimer.style.display = 'block';
+        
+        // Reset timer
+        resetTimer();
+        
+        // Start timer
+        startTimer();
+    };
     
-    // Show replay and rematch options
-    replayContainer.style.display = 'block';
+    // Reset timer
+    const resetTimer = () => {
+        // Clear any existing interval
+        if (state.timerInterval) {
+            clearInterval(state.timerInterval);
+            state.timerInterval = null;
+        }
+        
+        // Reset time remaining
+        state.timeRemaining = state.timerDuration;
+        
+        // Reset timer bar
+        if (timerBar) {
+            timerBar.style.width = '100%';
+        }
+    };
     
-    // In a real implementation, we would update Firebase with the results
-  };
-  
-  // Reset the board for a new game but keep scores
-  const resetBoardOnly = () => {
-    // Clear board state
-    tacticalState.boardState = Array(9).fill(null);
-    tacticalState.canPlaceShields = 0;
-    tacticalState.sacrificeMade = false; // Allow sacrifice in new game
-    tacticalState.bombs = {};
+    // Start timer
+    const startTimer = () => {
+        if (!state.blitzMode || state.timerInterval) return;
+        
+        // Calculate time increment (10ms interval for smooth animation)
+        const intervalMs = 10;
+        const decrementPerInterval = intervalMs / (state.timerDuration * 1000);
+        
+        let remainingPercentage = 100;
+        
+        // Start interval
+        state.timerInterval = setInterval(() => {
+            // Decrement remaining percentage
+            remainingPercentage -= decrementPerInterval * 100;
+            
+            // Update timer bar
+            if (timerBar) {
+                timerBar.style.width = `${Math.max(0, remainingPercentage)}%`;
+                
+                // Change color as time runs out
+                if (remainingPercentage < 30) {
+                    timerBar.style.backgroundColor = '#f44336';
+                } else if (remainingPercentage < 60) {
+                    timerBar.style.backgroundColor = '#ff9800';
+                } else {
+                    timerBar.style.backgroundColor = '#4caf50';
+                }
+            }
+            
+            // Check if timer has expired
+            if (remainingPercentage <= 0) {
+                // Time's up
+                clearInterval(state.timerInterval);
+                state.timerInterval = null;
+                
+                // Handle time expiration
+                handleTimeExpired();
+            }
+        }, intervalMs);
+    };
     
-    // Reset the board visuals
-    boardCells.forEach(cell => {
-      cell.classList.remove('x-move', 'o-move', 'shield', 'bomb-active');
-    });
+    // Handle time expiration
+    const handleTimeExpired = () => {
+        console.log('Time expired!');
+        
+        // Trigger auto-move or turn skip
+        const gameState = window.gameState;
+        if (gameState) {
+            // Skip turn
+            gameState.isPlayerTurn = false;
+            gameState.currentTurn = gameState.currentTurn === 'X' ? 'O' : 'X';
+            
+            // Update status message
+            const statusMessage = document.getElementById('statusMessage');
+            if (statusMessage) {
+                statusMessage.textContent = `Time's up! ${gameState.currentTurn}'s turn`;
+            }
+            
+            // Reset timer for next player
+            resetTimer();
+            startTimer();
+        }
+    };
     
-    // Remove win indicators
-    const indicators = document.querySelectorAll('.diagonal-win-indicator');
-    indicators.forEach(indicator => indicator.remove());
+    // Reset game state for tactical mode
+    const resetGame = () => {
+        // Reset tactical state
+        state.playerShields = { X: 2, O: 2 };
+        state.playerPower = { X: 100, O: 100 };
+        state.sacrificePositions = { X: [], O: [] };
+        state.lastMoves = [];
+        
+        // Reset timer if blitz mode is active
+        if (state.blitzMode) {
+            resetTimer();
+        }
+        
+        console.log('Tactical game reset');
+    };
     
-    // Reset action to strike
-    setCurrentAction('strike');
+    // Record move for replay
+    const recordMove = (player, index, action, boardState) => {
+        state.lastMoves.push({
+            player,
+            index,
+            action,
+            boardState: [...boardState], // Clone the board state
+            timestamp: Date.now()
+        });
+        
+        // Limit the moves history (keep last 10 moves)
+        if (state.lastMoves.length > 10) {
+            state.lastMoves.shift();
+        }
+        
+        // Show replay button if moves exist
+        if (replayBtn && state.lastMoves.length > 0) {
+            replayBtn.style.display = 'flex';
+        }
+    };
     
-    // Generate new power tiles for the next game
-    setupPowerTiles();
+    // Replay last move (animation)
+    const replayLastMove = () => {
+        if (state.lastMoves.length === 0) return;
+        
+        const lastMove = state.lastMoves[state.lastMoves.length - 1];
+        
+        // Show animation for the move
+        const cell = document.querySelector(`.board-cell[data-index="${lastMove.index}"]`);
+        if (cell) {
+            // Create animation overlay
+            const overlay = document.createElement('div');
+            overlay.className = 'replay-overlay';
+            
+            // Add action icon
+            const icon = document.createElement('i');
+            switch (lastMove.action) {
+                case 'strike':
+                    icon.className = 'fas fa-crosshairs';
+                    break;
+                case 'defend':
+                    icon.className = 'fas fa-shield-alt';
+                    break;
+                case 'sacrifice':
+                    icon.className = 'fas fa-exchange-alt';
+                    break;
+            }
+            
+            // Add player marker
+            const marker = document.createElement('span');
+            marker.textContent = lastMove.player;
+            marker.className = `player-marker ${lastMove.player.toLowerCase()}`;
+            
+            // Add elements to overlay
+            overlay.appendChild(icon);
+            overlay.appendChild(marker);
+            
+            // Add overlay to cell
+            cell.appendChild(overlay);
+            
+            // Remove overlay after animation completes
+            setTimeout(() => {
+                if (cell.contains(overlay)) {
+                    cell.removeChild(overlay);
+                }
+            }, 1500);
+        }
+    };
     
-    // Update status message
-    updateStatusMessage();
-  };
-  
-  // Complete reset including scores
-  const resetGame = () => {
-    resetBoardOnly();
+    // Process tactical move
+    const processTacticalMove = (player, index, boardState) => {
+        const action = state.currentAction;
+        
+        // Handle different actions
+        switch (action) {
+            case 'strike':
+                // Regular move, just place the symbol
+                boardState[index] = player;
+                break;
+                
+            case 'defend':
+                // Place a shield if player has shields available
+                if (state.playerShields[player] > 0) {
+                    // Shield the cell
+                    boardState[index] = player + 'S'; // S for Shield
+                    
+                    // Decrease shield count
+                    state.playerShields[player]--;
+                    
+                    // Update shield display
+                    updatePlayerStats();
+                } else {
+                    // No shields available, fall back to strike
+                    boardState[index] = player;
+                    console.log('No shields available, using strike instead');
+                }
+                break;
+                
+            case 'sacrifice':
+                // Sacrifice a position to gain a shield
+                if (state.sacrificePositions[player].length > 0) {
+                    // Get a position to sacrifice
+                    const sacIndex = state.sacrificePositions[player].pop();
+                    
+                    // Clear that position
+                    boardState[sacIndex] = '';
+                    
+                    // Increase shield count
+                    state.playerShields[player]++;
+                    
+                    // Update shield display
+                    updatePlayerStats();
+                    
+                    // Place at the new position
+                    boardState[index] = player;
+                } else {
+                    // No positions to sacrifice, fall back to strike
+                    boardState[index] = player;
+                    console.log('No positions to sacrifice, using strike instead');
+                }
+                break;
+        }
+        
+        // Record the move for replay
+        recordMove(player, index, action, boardState);
+        
+        // Return updated board state
+        return boardState;
+    };
     
-    // Reset scores
-    tacticalState.playerXScore = 0;
-    tacticalState.playerOScore = 0;
-    tacticalState.diagonalWinsX = 0;
-    tacticalState.diagonalWinsO = 0;
+    // Update player stats display
+    const updatePlayerStats = () => {
+        const xStats = document.getElementById('playerXStats');
+        const oStats = document.getElementById('playerOStats');
+        
+        if (xStats && oStats) {
+            // Update X player stats
+            const xShields = xStats.querySelector('.shields-count') || document.createElement('div');
+            xShields.className = 'shields-count';
+            xShields.innerHTML = `<i class="fas fa-shield-alt"></i> ${state.playerShields.X}`;
+            
+            const xPower = xStats.querySelector('.power-level') || document.createElement('div');
+            xPower.className = 'power-level';
+            xPower.innerHTML = `<i class="fas fa-bolt"></i> ${state.playerPower.X}%`;
+            
+            if (!xStats.contains(xShields)) xStats.appendChild(xShields);
+            if (!xStats.contains(xPower)) xStats.appendChild(xPower);
+            
+            // Update O player stats
+            const oShields = oStats.querySelector('.shields-count') || document.createElement('div');
+            oShields.className = 'shields-count';
+            oShields.innerHTML = `<i class="fas fa-shield-alt"></i> ${state.playerShields.O}`;
+            
+            const oPower = oStats.querySelector('.power-level') || document.createElement('div');
+            oPower.className = 'power-level';
+            oPower.innerHTML = `<i class="fas fa-bolt"></i> ${state.playerPower.O}%`;
+            
+            if (!oStats.contains(oShields)) oStats.appendChild(oShields);
+            if (!oStats.contains(oPower)) oStats.appendChild(oPower);
+        }
+    };
     
-    // Update UI
-    playerXScore.textContent = '0';
-    playerOScore.textContent = '0';
-    
-    // Hide replay container
-    replayContainer.style.display = 'none';
-  };
-  
-  // Function to confirm bet in Gambit mode
-  const confirmBet = () => {
-    if (tacticalState.betAmount > tacticalState.playerCoins) {
-      showNotification('You don\'t have enough coins for this bet!');
-      return;
-    }
-    
-    gambitSetup.style.display = 'none';
-    showNotification(`Bet placed: ${tacticalState.betAmount} coins`);
-    
-    // Here you would update the Firebase database with the bet information
-    // and wait for the opponent to confirm their bet
-  };
-  
-  // Replay the last move
-  const replayLastMove = () => {
-    if (!tacticalState.lastMove) return;
-    
-    // Replay animation logic would go here
-    showNotification('Replaying last move...');
-    
-    // Simple implementation: highlight the last move cell
-    const cell = document.querySelector(`.board-cell[data-index="${tacticalState.lastMove.index}"]`);
-    if (cell) {
-      cell.classList.add('highlight');
-      setTimeout(() => {
-        cell.classList.remove('highlight');
-      }, 1000);
-    }
-  };
-  
-  // Request a rematch
-  const requestRematch = () => {
-    showNotification('Requesting rematch...');
-    
-    // Firebase implementation would go here
-    // For now, we'll just reset the game locally
-    resetGame();
-  };
+    // Public API
+    return {
+        init,
+        state,
+        startTacticalGame,
+        processTacticalMove,
+        resetGame,
+        startBlitzTimer,
+        resetTimer
+    };
+})();
 
-  // Setup power tiles randomly on the board
-  const setupPowerTiles = () => {
-    // Clear existing power tiles
-    boardCells.forEach(cell => {
-      cell.classList.remove('power-tile', 'bomb-tile', 'swap-tile', 'lock-tile');
-    });
+// Initialize tactical mode when document is ready
+document.addEventListener('DOMContentLoaded', () => {
+    tacticalMode.init();
     
-    // Don't add power tiles in classic mode
-    if (tacticalState.gameMode !== 'tactical') return;
-    
-    // Generate 3 unique random positions for power tiles
-    const positions = [];
-    while (positions.length < 3) {
-      const pos = Math.floor(Math.random() * 9);
-      if (!positions.includes(pos)) {
-        positions.push(pos);
-      }
-    }
-    
-    // Assign different power types to the positions
-    boardCells[positions[0]].classList.add('power-tile', 'bomb-tile');
-    boardCells[positions[1]].classList.add('power-tile', 'swap-tile');
-    boardCells[positions[2]].classList.add('power-tile', 'lock-tile');
-    
-    tacticalState.powerTiles = positions;
-  };
-  
-  // Update the status message based on current game state
-  const updateStatusMessage = () => {
-    const statusMessage = document.getElementById('statusMessage');
-    
-    if (!statusMessage) return;
-    
-    if (tacticalState.gameMode === 'tactical') {
-      let message = '';
-      
-      if (tacticalState.currentAction === 'strike') {
-        message = 'Place your symbol on the board';
-      } else if (tacticalState.currentAction === 'defend') {
-        message = `Place a shield (${tacticalState.canPlaceShields} remaining)`;
-      } else if (tacticalState.currentAction === 'sacrifice') {
-        message = 'Select one of your symbols to sacrifice';
-      }
-      
-      statusMessage.textContent = message;
-    }
-  };
-  
-  // Start the blitz timer
-  const startBlitzTimer = () => {
-    // Clear any existing interval
-    if (tacticalState.timerInterval) {
-      clearInterval(tacticalState.timerInterval);
-    }
-    
-    tacticalState.timeLeft = 10;
-    timerBar.style.width = '100%';
-    
-    tacticalState.timerInterval = setInterval(() => {
-      tacticalState.timeLeft -= 0.1;
-      const percentage = (tacticalState.timeLeft / 10) * 100;
-      timerBar.style.width = `${percentage}%`;
-      
-      if (tacticalState.timeLeft <= 0) {
-        clearInterval(tacticalState.timerInterval);
-        handleTimeOut();
-      }
-    }, 100);
-  };
-  
-  // Handle timeout in blitz mode
-  const handleTimeOut = () => {
-    showNotification('Time\'s up! Random move made.');
-    
-    // Make a random move
-    const emptyCells = [];
-    tacticalState.boardState.forEach((cell, index) => {
-      if (!cell) emptyCells.push(index);
-    });
-    
-    if (emptyCells.length > 0) {
-      const randomIndex = emptyCells[Math.floor(Math.random() * emptyCells.length)];
-      // Make a move - in a real implementation this would trigger the regular move flow
-      placeSymbol(randomIndex, window.gameState.playerSymbol);
-    }
-  };
-
-  // Initialize the tactical mode
-  initTacticalMode();
-  
-  // Function to be called when starting a new game
-  const startTacticalGame = () => {
-    // Reset the board
-    resetGame();
-    
-    // Set up power tiles in tactical mode
-    setupPowerTiles();
-    
-    // Show action panel if in tactical mode
-    if (tacticalState.gameMode === 'tactical') {
-      actionPanel.classList.add('active');
-    }
-    
-    // Start blitz timer if in blitz mode
-    if (tacticalState.isBlitzMode) {
-      startBlitzTimer();
-    }
-    
-    // Show gambit setup if in gambit mode
-    if (tacticalState.isGambitMode) {
-      gambitSetup.style.display = 'block';
-    }
-  };
-  
-  // Call the init function to set everything up
-  initTacticalMode();
-  
-  // Exposing functions to the global scope to be used by app.js
-  window.tacticalMode = {
-    state: tacticalState,
-    setGameMode,
-    setCurrentAction,
-    makeTacticalMove,
-    startTacticalGame,
-    resetGame,
-    showNotification: (message) => window.showNotification(message),
-  };
+    // Make tacticalMode available globally
+    window.tacticalMode = tacticalMode;
 }); 

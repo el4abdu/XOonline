@@ -79,86 +79,55 @@
 
 /* Action Selector Panel */
 .action-panel {
-  display: none;
+  display: flex;
   justify-content: space-between;
   margin-bottom: 20px;
-  background-color: rgba(94, 23, 235, 0.05);
-  border-radius: var(--border-radius);
-  padding: 10px;
-  transition: all 0.3s ease;
+  position: relative;
+  height: 0;
+  overflow: hidden;
+  transition: height 0.3s ease, opacity 0.3s ease;
+  opacity: 0;
 }
 
-.dark-mode .action-panel {
-  background-color: rgba(157, 86, 255, 0.1);
+.action-panel.active {
+  height: 60px;
+  opacity: 1;
 }
 
 .action-btn-tactical {
+  flex: 1;
+  margin: 0 5px;
+  background: var(--board-color);
+  border: 2px solid var(--cell-border);
+  border-radius: 12px;
+  padding: 10px;
+  cursor: pointer;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 12px;
-  border-radius: var(--border-radius);
-  cursor: pointer;
-  flex: 1;
-  margin: 0 5px;
-  transition: all 0.3s ease;
-  position: relative;
-  overflow: hidden;
+  transition: all 0.2s ease;
 }
 
-.action-btn-tactical::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: linear-gradient(135deg, rgba(94, 23, 235, 0.1), rgba(157, 86, 255, 0.2));
-  opacity: 0;
-  transition: opacity 0.3s ease;
-  z-index: 1;
-}
-
-.action-btn-tactical:hover::before {
-  opacity: 1;
-}
-
-.action-btn-tactical i {
-  font-size: 1.5rem;
-  margin-bottom: 5px;
-  color: var(--primary-color);
-  position: relative;
-  z-index: 2;
-  transition: all 0.3s ease;
-}
-
-.action-btn-tactical span {
-  font-size: 0.9rem;
-  font-weight: 600;
-  position: relative;
-  z-index: 2;
-  transition: all 0.3s ease;
+.action-btn-tactical:hover {
+  transform: translateY(-2px);
+  background: var(--bg-color);
 }
 
 .action-btn-tactical.selected {
-  background-color: var(--primary-color);
-  transform: translateY(-3px);
-  box-shadow: 0 4px 12px rgba(94, 23, 235, 0.3);
+  border-color: var(--tactical-primary);
+  background: rgba(142, 68, 173, 0.1);
 }
 
-.action-btn-tactical.selected i,
-.action-btn-tactical.selected span {
-  color: white;
+.action-btn-tactical i {
+  font-size: 1.2rem;
+  margin-bottom: 5px;
 }
 
-.dark-mode .action-btn-tactical i {
-  color: var(--dark-secondary);
-}
-
-.dark-mode .action-btn-tactical.selected {
-  background-color: var(--dark-secondary);
-  box-shadow: 0 4px 12px rgba(157, 86, 255, 0.3);
+.action-btn-tactical span {
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
 }
 
 /* Game board modifications */
@@ -447,172 +416,4 @@
 .rematch-btn:hover {
   transform: translateY(-2px);
   box-shadow: 0 5px 20px rgba(142, 68, 173, 0.4);
-}
-
-/* Tactical board effect styles */
-.board-cell.defended {
-  position: relative;
-  overflow: hidden;
-}
-
-.board-cell.defended::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: repeating-linear-gradient(
-    45deg,
-    rgba(33, 150, 243, 0.2),
-    rgba(33, 150, 243, 0.2) 10px,
-    rgba(33, 150, 243, 0.3) 10px,
-    rgba(33, 150, 243, 0.3) 20px
-  );
-  z-index: 1;
-  border-radius: 5px;
-  animation: shield-pulse 2s infinite alternate;
-}
-
-@keyframes shield-pulse {
-  from {
-    opacity: 0.5;
-  }
-  to {
-    opacity: 0.8;
-  }
-}
-
-.board-cell.sacrificed {
-  position: relative;
-  overflow: hidden;
-}
-
-.board-cell.sacrificed::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: repeating-linear-gradient(
-    -45deg,
-    rgba(255, 87, 34, 0.2),
-    rgba(255, 87, 34, 0.2) 10px,
-    rgba(255, 87, 34, 0.3) 10px,
-    rgba(255, 87, 34, 0.3) 20px
-  );
-  z-index: 1;
-  border-radius: 5px;
-  animation: sacrifice-pulse 2s infinite alternate;
-}
-
-@keyframes sacrifice-pulse {
-  from {
-    opacity: 0.5;
-  }
-  to {
-    opacity: 0.8;
-  }
-}
-
-/* Tactical action effects */
-.tactical-effect {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-  z-index: 10;
-}
-
-.strike-effect {
-  background: radial-gradient(circle, rgba(244, 67, 54, 0.7) 0%, rgba(244, 67, 54, 0) 70%);
-  animation: strike-anim 0.6s forwards;
-}
-
-.defend-effect {
-  background: radial-gradient(circle, rgba(33, 150, 243, 0.7) 0%, rgba(33, 150, 243, 0) 70%);
-  animation: defend-anim 0.6s forwards;
-}
-
-.sacrifice-effect {
-  background: radial-gradient(circle, rgba(255, 152, 0, 0.7) 0%, rgba(255, 152, 0, 0) 70%);
-  animation: sacrifice-anim 0.6s forwards;
-}
-
-@keyframes strike-anim {
-  0% {
-    transform: scale(0);
-    opacity: 0;
-  }
-  50% {
-    opacity: 1;
-  }
-  100% {
-    transform: scale(3);
-    opacity: 0;
-  }
-}
-
-@keyframes defend-anim {
-  0% {
-    transform: scale(0);
-    opacity: 0;
-  }
-  50% {
-    opacity: 1;
-  }
-  100% {
-    transform: scale(3);
-    opacity: 0;
-  }
-}
-
-@keyframes sacrifice-anim {
-  0% {
-    transform: scale(0);
-    opacity: 0;
-  }
-  50% {
-    opacity: 1;
-  }
-  100% {
-    transform: scale(3);
-    opacity: 0;
-  }
-}
-
-/* Shield counter */
-.shield-counter {
-  position: absolute;
-  top: 5px;
-  right: 5px;
-  background-color: rgba(33, 150, 243, 0.8);
-  color: white;
-  border-radius: 50%;
-  width: 20px;
-  height: 20px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.8rem;
-  font-weight: bold;
-  z-index: 2;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-}
-
-/* Tactical icons */
-.tactical-icon {
-  position: absolute;
-  top: 5px;
-  left: 5px;
-  font-size: 0.8rem;
-  color: rgba(0, 0, 0, 0.6);
-  z-index: 2;
-}
-
-.dark-mode .tactical-icon {
-  color: rgba(255, 255, 255, 0.6);
 } 
