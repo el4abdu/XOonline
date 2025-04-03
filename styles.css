@@ -21,26 +21,26 @@
 
 /* Reset & Base Styles */
 * {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
     font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
 body {
-    background-color: var(--bg-color);
-    color: var(--text-color);
-    min-height: 100vh;
-    display: flex;
-    justify-content: center;
-    align-items: center;
+  background-color: var(--bg-color);
+  color: var(--text-color);
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
     transition: background-color 0.5s ease;
     font-size: 16px;
 }
 
 /* App Container */
 .app-container {
-    width: 100%;
+  width: 100%;
     max-width: 600px;
     padding: 20px;
     display: flex;
@@ -51,8 +51,8 @@ body {
 /* Header & Logo */
 header {
     width: 100%;
-    display: flex;
-    justify-content: space-between;
+  display: flex;
+  justify-content: space-between;
     margin-bottom: 20px;
 }
 
@@ -77,7 +77,7 @@ header {
 
 .logo span {
     font-weight: 400;
-    opacity: 0.8;
+  opacity: 0.8;
     font-size: 1.5rem;
     margin-left: 5px;
 }
@@ -85,10 +85,10 @@ header {
 /* Dark Mode Toggle */
 .dark-mode-toggle {
     background: none;
-    border: none;
+  border: none;
     color: var(--text-color);
     font-size: 1.2rem;
-    cursor: pointer;
+  cursor: pointer;
     padding: 10px;
     border-radius: 50%;
     transition: var(--transition);
@@ -135,8 +135,8 @@ p {
 
 /* Setup Options */
 .setup-options {
-    display: flex;
-    flex-direction: column;
+  display: flex;
+  flex-direction: column;
     gap: 15px;
     margin-bottom: 20px;
 }
@@ -149,10 +149,10 @@ p {
     align-items: center;
     justify-content: center;
     background: none;
-    border: none;
+  border: none;
     cursor: pointer;
     padding: 0;
-    font-weight: 600;
+  font-weight: 600;
     color: var(--text-color);
     transition: transform 0.2s ease;
 }
@@ -163,9 +163,9 @@ p {
     left: 0;
     width: 100%;
     height: 100%;
-    display: flex;
+  display: flex;
     align-items: center;
-    justify-content: center;
+  justify-content: center;
     gap: 8px;
     background: var(--gradient);
     border-radius: 12px;
@@ -198,7 +198,7 @@ p {
 }
 
 .quick-btn:hover, .create-btn:hover, .help-btn:hover, .action-btn:hover {
-    transform: translateY(-2px);
+  transform: translateY(-2px);
 }
 
 .quick-btn:hover .button-top, .create-btn:hover .button-top, 
@@ -238,8 +238,8 @@ p {
 
 /* Join Game Input */
 .join-game {
-    display: flex;
-    gap: 10px;
+  display: flex;
+  gap: 10px;
     margin: 15px 0;
 }
 
@@ -247,15 +247,15 @@ p {
     flex: 1;
     padding: 12px 15px;
     border: none;
-    border-radius: 12px;
+  border-radius: 12px;
     background-color: rgba(255, 255, 255, 0.1);
     color: var(--text-color);
-    font-size: 1rem;
+  font-size: 1rem;
     transition: var(--transition);
 }
 
 .join-game input:focus {
-    outline: none;
+  outline: none;
     background-color: rgba(255, 255, 255, 0.15);
     box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.5);
 }
@@ -263,8 +263,8 @@ p {
 .join-game button {
     height: 50px;
     background: none;
-    border: none;
-    cursor: pointer;
+  border: none;
+  cursor: pointer;
 }
 
 /* OR Divider */
@@ -295,9 +295,9 @@ p {
 
 /* Score Display */
 .score-display {
-    display: flex;
-    justify-content: center;
-    align-items: center;
+  display: flex;
+  justify-content: center;
+  align-items: center;
     gap: 15px;
     margin: 15px 0;
     padding: 15px;
@@ -354,11 +354,11 @@ p {
 }
 
 .game-board {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    grid-template-rows: repeat(3, 1fr);
-    gap: 10px;
-    margin: 0 auto;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(3, 1fr);
+  gap: 10px;
+  margin: 0 auto;
     perspective: 1000px;
 }
 
@@ -367,7 +367,7 @@ p {
     aspect-ratio: 1 / 1;
     background-color: rgba(255, 255, 255, 0.05);
     border-radius: 10px;
-    cursor: pointer;
+  cursor: pointer;
     transition: var(--transition);
     overflow: hidden;
     perspective: 1000px;
@@ -393,11 +393,11 @@ p {
     width: 100%;
     height: 100%;
     backface-visibility: hidden;
-    display: flex;
+  display: flex;
     align-items: center;
-    justify-content: center;
-    font-size: 2.5rem;
-    font-weight: 700;
+  justify-content: center;
+  font-size: 2.5rem;
+  font-weight: 700;
 }
 
 .flip-back {
@@ -428,15 +428,15 @@ p {
 
 /* Game Actions */
 .game-actions {
-    display: flex;
+  display: flex;
     flex-wrap: wrap;
     gap: 10px;
-    justify-content: center;
+  justify-content: center;
     margin-top: 20px;
 }
 
 .action-buttons {
-    display: flex;
+  display: flex;
     justify-content: center;
     margin-top: 15px;
     gap: 10px;
@@ -444,10 +444,10 @@ p {
 
 /* Notification */
 .notification {
-    position: fixed;
+  position: fixed;
     bottom: 20px;
-    left: 50%;
-    transform: translateX(-50%);
+  left: 50%;
+  transform: translateX(-50%);
     padding: 15px 25px;
     background: var(--gradient);
     color: white;
@@ -455,12 +455,12 @@ p {
     box-shadow: var(--box-shadow);
     z-index: 1000;
     transition: var(--transition);
-    opacity: 0;
+  opacity: 0;
     pointer-events: none;
 }
 
 .notification.show {
-    opacity: 1;
+  opacity: 1;
     transform: translateX(-50%) translateY(-10px);
 }
 
@@ -565,7 +565,7 @@ footer {
     text-align: center;
     padding: 20px;
     color: rgba(255, 255, 255, 0.5);
-    font-size: 0.9rem;
+  font-size: 0.9rem;
 }
 
 footer i {
@@ -612,13 +612,13 @@ footer i {
 
 /* Responsive Styles */
 @media (max-width: 768px) {
-    .container {
-        padding: 20px;
-    }
-    
-    .board-cell {
-        font-size: 2rem;
-    }
+  .container {
+    padding: 20px;
+  }
+  
+  .board-cell {
+    font-size: 2rem;
+  }
 }
 
 @media (max-width: 480px) {
@@ -634,212 +634,24 @@ footer i {
         font-size: 1.2rem;
     }
     
-    .container {
-        padding: 15px;
-    }
-    
+  .container {
+    padding: 15px;
+  }
+  
     .board-cell {
-        font-size: 1.8rem;
-    }
-    
+    font-size: 1.8rem;
+  }
+  
     .join-game {
         flex-direction: column;
-    }
-    
+  }
+  
     .game-actions {
-        flex-direction: column;
+    flex-direction: column;
     }
 }
 
 /* Make the container active by default */
 #gameSetup {
     display: block;
-}
-
-/* Chat Styles */
-.chat-container {
-    margin-top: 20px;
-    background-color: rgba(255, 255, 255, 0.05);
-    border-radius: var(--border-radius);
-    overflow: hidden;
-    transition: var(--transition);
-    max-height: 300px;
-    display: flex;
-    flex-direction: column;
-}
-
-.chat-container.collapsed {
-    max-height: 50px;
-}
-
-.chat-header {
-    padding: 10px 15px;
-    background: var(--gradient);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    cursor: pointer;
-}
-
-.chat-header h3 {
-    margin: 0;
-    font-size: 1rem;
-    font-weight: 600;
-    color: white;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.toggle-chat-btn {
-    background: none;
-    border: none;
-    color: white;
-    cursor: pointer;
-    font-size: 0.8rem;
-    padding: 5px;
-    transition: transform 0.3s ease;
-}
-
-.chat-container.collapsed .toggle-chat-btn {
-    transform: rotate(180deg);
-}
-
-.chat-body {
-    display: flex;
-    flex-direction: column;
-    height: 250px;
-    overflow: hidden;
-    transition: height 0.3s ease;
-}
-
-.chat-container.collapsed .chat-body {
-    height: 0;
-}
-
-.chat-messages {
-    flex: 1;
-    overflow-y: auto;
-    padding: 10px;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-
-.chat-welcome-message {
-    background-color: rgba(255, 255, 255, 0.05);
-    padding: 10px;
-    border-radius: 8px;
-    text-align: center;
-    font-style: italic;
-    color: rgba(255, 255, 255, 0.7);
-    margin-bottom: 10px;
-}
-
-.chat-message {
-    padding: 8px 12px;
-    border-radius: 12px;
-    max-width: 80%;
-    word-break: break-word;
-    position: relative;
-    animation: message-appear 0.3s forwards;
-}
-
-@keyframes message-appear {
-    from {
-        opacity: 0;
-        transform: translateY(10px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-.chat-message.sent {
-    align-self: flex-end;
-    background: linear-gradient(135deg, var(--primary-color), #4f46e5);
-    color: white;
-    border-bottom-right-radius: 3px;
-}
-
-.chat-message.received {
-    align-self: flex-start;
-    background-color: rgba(255, 255, 255, 0.1);
-    color: var(--text-color);
-    border-bottom-left-radius: 3px;
-}
-
-.message-sender {
-    font-size: 0.7rem;
-    font-weight: 600;
-    opacity: 0.8;
-    margin-bottom: 3px;
-}
-
-.message-time {
-    font-size: 0.6rem;
-    opacity: 0.6;
-    text-align: right;
-    margin-top: 2px;
-}
-
-.chat-input-container {
-    display: flex;
-    padding: 10px;
-    background-color: rgba(0, 0, 0, 0.1);
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.chat-input-container input {
-    flex: 1;
-    background-color: rgba(255, 255, 255, 0.1);
-    border: none;
-    border-radius: 20px;
-    padding: 8px 15px;
-    color: var(--text-color);
-    font-size: 0.9rem;
-}
-
-.chat-input-container input:focus {
-    outline: none;
-    background-color: rgba(255, 255, 255, 0.15);
-}
-
-.chat-input-container button {
-    background: var(--gradient);
-    border: none;
-    border-radius: 50%;
-    width: 36px;
-    height: 36px;
-    margin-left: 10px;
-    color: white;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: var(--transition);
-}
-
-.chat-input-container button:hover {
-    transform: scale(1.1);
-}
-
-.chat-input-container button:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-}
-
-/* Notification badge for new messages */
-.chat-header .notification-badge {
-    background-color: #f44336;
-    color: white;
-    border-radius: 50%;
-    width: 18px;
-    height: 18px;
-    font-size: 0.7rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin-left: 5px;
 } 

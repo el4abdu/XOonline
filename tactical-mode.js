@@ -6,25 +6,25 @@
 
 // Tactical Mode for XO.GAME
 const tacticalMode = (function() {
-    // DOM Elements
+  // DOM Elements
     const actionPanel = document.getElementById('actionPanel');
     const tacticalBadge = document.getElementById('tacticalBadge');
-    const gameModeSelector = document.getElementById('gameModeSelector');
+  const gameModeSelector = document.getElementById('gameModeSelector');
     const blitzToggle = document.getElementById('blitzModeToggle');
     const gambitToggle = document.getElementById('gambitModeToggle');
-    const blitzTimer = document.getElementById('blitzTimer');
-    const timerBar = document.getElementById('timerBar');
+  const blitzTimer = document.getElementById('blitzTimer');
+  const timerBar = document.getElementById('timerBar');
     const replayBtn = document.getElementById('replayBtn');
-    const gameStats = document.getElementById('gameStats');
+  const gameStats = document.getElementById('gameStats');
     
     // Tactical Mode State
     const state = {
-        gameMode: 'classic', // 'classic' or 'tactical'
-        currentAction: 'strike', // 'strike', 'defend', or 'sacrifice'
+    gameMode: 'classic', // 'classic' or 'tactical'
+    currentAction: 'strike', // 'strike', 'defend', or 'sacrifice'
         blitzMode: false,
         gambitMode: false,
         timerDuration: 10, // seconds
-        timerInterval: null,
+    timerInterval: null,
         timeRemaining: 0,
         lastMoves: [],
         playerShields: {
@@ -39,9 +39,9 @@ const tacticalMode = (function() {
             X: [],
             O: []
         }
-    };
-    
-    // Initialize tactical mode
+  };
+  
+  // Initialize tactical mode
     const init = () => {
         // Hide tactical UI elements by default
         if (actionPanel) actionPanel.style.display = 'none';
@@ -63,8 +63,8 @@ const tacticalMode = (function() {
             const modeOptions = gameModeSelector.querySelectorAll('.mode-option');
             const modeSlider = gameModeSelector.querySelector('.mode-slider');
             
-            modeOptions.forEach(option => {
-                option.addEventListener('click', () => {
+    modeOptions.forEach(option => {
+      option.addEventListener('click', () => {
                     // Update active class
                     modeOptions.forEach(opt => opt.classList.remove('active'));
                     option.classList.add('active');
@@ -81,11 +81,11 @@ const tacticalMode = (function() {
                     
                     // Show/hide tactical options
                     toggleTacticalOptions(state.gameMode === 'tactical');
-                });
-            });
+      });
+    });
         }
-        
-        // Blitz mode toggle
+    
+    // Blitz mode toggle
         if (blitzToggle) {
             const checkbox = blitzToggle.querySelector('input[type="checkbox"]');
             if (checkbox) {
@@ -95,8 +95,8 @@ const tacticalMode = (function() {
                 });
             }
         }
-        
-        // Gambit mode toggle
+    
+    // Gambit mode toggle
         if (gambitToggle) {
             const checkbox = gambitToggle.querySelector('input[type="checkbox"]');
             if (checkbox) {
@@ -121,10 +121,10 @@ const tacticalMode = (function() {
                 });
             });
         }
-        
-        // Replay button
+    
+    // Replay button
         if (replayBtn) {
-            replayBtn.addEventListener('click', replayLastMove);
+    replayBtn.addEventListener('click', replayLastMove);
         }
     };
     
@@ -331,7 +331,7 @@ const tacticalMode = (function() {
             cell.appendChild(overlay);
             
             // Remove overlay after animation completes
-            setTimeout(() => {
+      setTimeout(() => {
                 if (cell.contains(overlay)) {
                     cell.removeChild(overlay);
                 }
@@ -436,9 +436,9 @@ const tacticalMode = (function() {
     return {
         init,
         state,
-        startTacticalGame,
+    startTacticalGame,
         processTacticalMove,
-        resetGame,
+    resetGame,
         startBlitzTimer,
         resetTimer
     };

@@ -43,11 +43,9 @@ document.addEventListener('DOMContentLoaded', () => {
   // References
   let gameRef = null;
   let movesRef = null;
-  let chatRef = null;
   let quickMatchRef = null;
   let waitingForMatch = false;
   let matchmakingTimeout = null;
-  let unreadMessages = 0;
 
   // Generate a random room code
   const generateRoomCode = () => {
@@ -132,12 +130,12 @@ document.addEventListener('DOMContentLoaded', () => {
       const flipBack = cell.querySelector('.flip-back');
       if (flipBack) {
         // Set the content of the flip-back based on the move
-        if (gameState.board[index] === 'X') {
+      if (gameState.board[index] === 'X') {
           flipBack.textContent = 'X';
-          cell.classList.add('x-move');
-        } else if (gameState.board[index] === 'O') {
+        cell.classList.add('x-move');
+      } else if (gameState.board[index] === 'O') {
           flipBack.textContent = 'O';
-          cell.classList.add('o-move');
+        cell.classList.add('o-move');
         } else {
           flipBack.textContent = '';
         }
@@ -244,36 +242,38 @@ document.addEventListener('DOMContentLoaded', () => {
     gameRef = database.ref(`games/${roomCode}`);
     movesRef = gameRef.child('moves');
     
+    // Test the Firebase connection first
     database.ref('.info/connected').once('value')
-      .then(snap => {
-        if (snap.val() === true) {
-          // Create initial game state
-          return gameRef.set({
+      .then((snapshot) => {
+        if (snapshot.val() === true) {
+          console.log('Connected to Firebase successfully');
+          
+          // Add tactical mode info to the game data if needed
+          const gameData = {
+            createdAt: firebase.database.ServerValue.TIMESTAMP,
             status: 'waiting',
-            playerSymbol: 'waiting',
-            board: Array(9).fill(''),
-            currentTurn: 'X',
-            gameEnded: false,
-            gameStartedAt: null,
+            currentTurn: 'X', // Will be randomized after both players join
             players: {
-              creator: gameState.playerName,
-              creatorConnected: true
+              creator: gameState.playerName // Just store as creator first, will update with X/O later
             },
             readyState: {
-              creator: false,
-              joiner: false,
-              creatorCanStart: false
+              creator: false, // Creator will mark ready when player 2 joins
+              joiner: false
             },
-            chat: {
-              welcome: {
-                sender: 'System',
-                message: 'Game room created! Share the room code with a friend to start playing.',
-                timestamp: firebase.database.ServerValue.TIMESTAMP
-              }
-            }
-          });
+            board: gameState.board,
+            gameEnded: false,
+            winner: null
+          };
+          
+          if (isTacticalMode) {
+            gameData.gameMode = 'tactical';
+            gameData.isBlitzMode = window.tacticalMode.state.isBlitzMode;
+            gameData.isGambitMode = window.tacticalMode.state.isGambitMode;
+          }
+          
+          return gameRef.set(gameData);
         } else {
-          throw new Error('No Firebase connection');
+          throw new Error('Not connected to Firebase');
         }
       })
       .then(() => {
@@ -281,9 +281,6 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Listen for changes
         setupGameListeners();
-        
-        // Initialize chat
-        setupChat();
 
         // Update UI
         gameSetup.classList.remove('active');
@@ -299,12 +296,6 @@ document.addEventListener('DOMContentLoaded', () => {
         exitRoomBtn.style.display = 'flex';
         newGameBtn.style.display = 'none';
         
-        // Show and collapse chat by default
-        const chatContainer = document.querySelector('.chat-container');
-        if (chatContainer) {
-          chatContainer.classList.add('collapsed');
-        }
-
         // Show ready button (will be enabled when player 2 joins)
         const readyBtn = document.createElement('button');
         readyBtn.id = 'readyBtn';
@@ -535,139 +526,236 @@ document.addEventListener('DOMContentLoaded', () => {
   // Join an existing game
   const joinGame = (roomCode) => {
     if (!roomCode) {
-      showNotification('Please enter a room code');
+      showNotification('Please enter a valid room code');
       return;
     }
+
+    // Show notification that we're trying to join
+    showNotification('Trying to join game...');
     
-    // Show notification
-    showNotification('Joining game...');
-    
-    // Check if the game exists
+    // Check if game exists
     const checkGameRef = database.ref(`games/${roomCode}`);
+    
     checkGameRef.once('value')
       .then((snapshot) => {
         const gameData = snapshot.val();
         
         if (!gameData) {
-          showNotification('Game not found');
-          throw new Error('Game not found');
+          showNotification('Game not found. Check the room code.');
+          console.error('Game not found:', roomCode);
+          return;
         }
         
-        if (gameData.status === 'full') {
-          showNotification('Game room is full');
-          throw new Error('Game room is full');
+        console.log('Found game data:', JSON.stringify(gameData));
+        
+        // Check if the game is tactical mode and set up accordingly
+        if (gameData.gameMode === 'tactical' && window.tacticalMode) {
+          window.tacticalMode.setGameMode('tactical');
+          
+          if (gameData.isBlitzMode) {
+            document.getElementById('blitzModeCheckbox').checked = true;
+            window.tacticalMode.state.isBlitzMode = true;
+          }
+          
+          if (gameData.isGambitMode) {
+            document.getElementById('gambitModeCheckbox').checked = true;
+            window.tacticalMode.state.isGambitMode = true;
+          }
         }
         
-        // We can join this game
-        gameState.roomCode = roomCode;
-        gameState.playerSymbol = 'waiting'; // Will be assigned when game starts
-        gameState.isPlayerTurn = false;
-        gameState.gameActive = true;
-        gameState.board = gameData.board || Array(9).fill('');
-        gameState.currentTurn = gameData.currentTurn || 'X';
-        gameState.gameEnded = gameData.gameEnded || false;
-        gameState.winner = gameData.winner || null;
-        gameState.isCreator = false; // This player is joining, not creating
-        
-        // Set up Firebase references
-        gameRef = checkGameRef;
-        movesRef = gameRef.child('moves');
-        
-        // Update the game to show player 2 has joined
-        return gameRef.once('value')
-          .then((snapshot) => {
-            const fullGameData = snapshot.val();
-            const updates = {};
-            
-            // Add joiner to players list
-            updates[`players/joiner`] = gameState.playerName;
-            updates[`players/joinerConnected`] = true;
-            
-            // Update ready state to enable the creator's ready button
-            updates[`readyState/creatorCanStart`] = true;
-            
-            // Add a system message to chat
-            const chatId = Date.now().toString();
-            updates[`chat/${chatId}`] = {
-              sender: 'System',
-              message: `${gameState.playerName} has joined the game!`,
-              timestamp: firebase.database.ServerValue.TIMESTAMP
-            };
-            
-            return gameRef.update(updates);
-          })
+        if (gameData.status === 'waiting') {
+          // This is player 2 joining a waiting game
+          gameState.roomCode = roomCode;
+          gameState.playerSymbol = 'waiting'; // Will be assigned when game starts
+          gameState.isPlayerTurn = false;
+          gameState.board = gameData.board || Array(9).fill('');
+          gameState.currentTurn = gameData.currentTurn || 'X';
+          gameState.gameEnded = gameData.gameEnded || false;
+          gameState.winner = gameData.winner || null;
+          gameState.gameActive = true;
+          gameState.isCreator = false;
+          
+          // Update game in Firebase
+          gameRef = database.ref(`games/${roomCode}`);
+          movesRef = gameRef.child('moves');
+          
+          // Get existing data and update safely
+          gameRef.once('value')
+            .then((snapshot) => {
+              const fullGameData = snapshot.val() || {};
+              
+              // Create a clean players object
+              const updatedPlayers = {};
+              
+              // Preserve creator
+              if (fullGameData.players && fullGameData.players.creator) {
+                updatedPlayers.creator = fullGameData.players.creator;
+              }
+              
+              // Add joiner
+              updatedPlayers.joiner = gameState.playerName;
+              
+              // Create a complete update object
+              const completeUpdate = {
+                ...fullGameData,
+                players: updatedPlayers
+              };
+              
+              // Set the entire state or just update players node
+              return gameRef.child('players').set(updatedPlayers);
+            })
           .then(() => {
-            console.log('Successfully joined game');
+              console.log('Successfully joined game');
             
             // Listen for changes
             setupGameListeners();
-            
-            // Initialize chat
-            setupChat();
             
             // Update UI
             gameSetup.classList.remove('active');
             gameBoard.classList.add('active');
             roomCodeDisplay.textContent = roomCode;
-            playerSymbol.textContent = 'Waiting...';
-            
-            updateStatusMessage("Waiting for game to start...");
+              playerSymbol.textContent = 'Waiting...';
+              
+              updateStatusMessage("Waiting for game to start...");
             
             // Show action buttons
             copyRoomBtn.style.display = 'flex';
             exitRoomBtn.style.display = 'flex';
-            newGameBtn.style.display = 'none';
+              newGameBtn.style.display = 'none';
+              
+              // Show ready button for player 2
+              const readyBtn = document.createElement('button');
+              readyBtn.id = 'readyBtn';
+              readyBtn.className = 'action-btn';
+              
+              // Create button elements
+              const buttonTop = document.createElement('div');
+              buttonTop.className = 'button-top';
+              buttonTop.innerHTML = 'Ready!';
+              
+              const buttonBottom = document.createElement('div');
+              buttonBottom.className = 'button-bottom';
+              
+              const buttonBase = document.createElement('div');
+              buttonBase.className = 'button-base';
+              
+              // Append elements to button
+              readyBtn.appendChild(buttonTop);
+              readyBtn.appendChild(buttonBottom);
+              readyBtn.appendChild(buttonBase);
+              
+              readyBtn.addEventListener('click', markPlayerReady);
+              
+              // Find the correct container - handle multiple possibilities
+              const actionButtonsContainer = document.querySelector('.action-buttons') || 
+                                             document.querySelector('.game-actions');
+              
+              if (actionButtonsContainer) {
+                actionButtonsContainer.appendChild(readyBtn);
+              } else {
+                // Fallback - append to gameBoard
+                document.getElementById('gameBoard').appendChild(readyBtn);
+              }
             
-            // Show and collapse chat by default
-            const chatContainer = document.querySelector('.chat-container');
-            if (chatContainer) {
-              chatContainer.classList.add('collapsed');
+            // Initialize tactical mode if needed
+            if (gameData.gameMode === 'tactical' && window.tacticalMode) {
+              window.tacticalMode.startTacticalGame();
             }
             
-            // Show ready button for player 2
-            const readyBtn = document.createElement('button');
-            readyBtn.id = 'readyBtn';
-            readyBtn.className = 'action-btn';
-            
-            // Create button elements
-            const buttonTop = document.createElement('div');
-            buttonTop.className = 'button-top';
-            buttonTop.innerHTML = 'Ready!';
-            
-            const buttonBottom = document.createElement('div');
-            buttonBottom.className = 'button-bottom';
-            
-            const buttonBase = document.createElement('div');
-            buttonBase.className = 'button-base';
-            
-            // Append elements to button
-            readyBtn.appendChild(buttonTop);
-            readyBtn.appendChild(buttonBottom);
-            readyBtn.appendChild(buttonBase);
-            
-            readyBtn.addEventListener('click', markPlayerReady);
-            
-            // Find the correct container - handle multiple possibilities
-            const actionButtonsContainer = document.querySelector('.action-buttons') || 
-                                           document.querySelector('.game-actions');
-            
-            if (actionButtonsContainer) {
-              actionButtonsContainer.appendChild(readyBtn);
-            } else {
-              // Fallback - append to gameBoard
-              document.getElementById('gameBoard').appendChild(readyBtn);
-            }
-            
-            // If the game is already in progress, hide the ready button
-            if (gameData.status === 'active') {
-              readyBtn.style.display = 'none';
-            }
-            
-            showNotification('Joined game successfully!');
+              // Enable the creator's start button safely
+              gameRef.child('readyState').once('value', snapshot => {
+                const currentReadyState = snapshot.val() || {};
+                currentReadyState.creatorCanStart = true;
+                return gameRef.child('readyState').set(currentReadyState);
+              })
+              .then(() => {
+                showNotification('Joined the game successfully! Press Ready when you are ready to play.');
+              });
+          })
+          .catch(error => {
+            console.error('Failed to update game status:', error);
+            showNotification('Error joining game: ' + error.message);
           });
+        } else if (gameData.status === 'active') {
+          // Check if we can reconnect as a player
+          const players = gameData.players || {};
+          
+          if (!players.X || !players.O) {
+            // Can join as the missing player
+            const availableSymbol = !players.X ? 'X' : 'O';
+            
+            gameState.roomCode = roomCode;
+            gameState.playerSymbol = availableSymbol;
+            gameState.isPlayerTurn = gameData.currentTurn === availableSymbol;
+            gameState.board = gameData.board || Array(9).fill('');
+            gameState.currentTurn = gameData.currentTurn || 'X';
+            gameState.gameEnded = gameData.gameEnded || false;
+            gameState.winner = gameData.winner || null;
+            gameState.gameActive = true;
+            
+            // Update game in Firebase
+            gameRef = database.ref(`games/${roomCode}`);
+            movesRef = gameRef.child('moves');
+            
+            // Method 1: Using set instead of update for the players node
+            gameRef.child('players').once('value')
+              .then((snapshot) => {
+                // Carefully build a clean players object
+                const currentPlayers = {};
+                const existingPlayers = snapshot.val() || {};
+                
+                // Copy existing player (if any)
+                if (availableSymbol === 'X' && existingPlayers.O) {
+                  currentPlayers.O = existingPlayers.O;
+                } else if (availableSymbol === 'O' && existingPlayers.X) {
+                  currentPlayers.X = existingPlayers.X;
+                }
+                
+                // Add new player safely
+                currentPlayers[availableSymbol] = gameState.playerName;
+                
+                // Set the entire players object (not using update with dot notation)
+                return gameRef.child('players').set(currentPlayers);
+              })
+              .then(() => {
+                console.log('Successfully reconnected as player:', availableSymbol);
+                
+                // Listen for changes
+                setupGameListeners();
+                
+                // Update UI
+                gameSetup.classList.remove('active');
+                gameBoard.classList.add('active');
+                roomCodeDisplay.textContent = roomCode;
+                playerSymbol.textContent = availableSymbol;
+                updateStatusMessage(`${gameData.currentTurn}'s turn`);
+                
+                // Show action buttons
+                copyRoomBtn.style.display = 'flex';
+                exitRoomBtn.style.display = 'flex';
+                newGameBtn.style.display = 'flex';
+                
+                // Initialize tactical mode if needed
+                if (gameData.gameMode === 'tactical' && window.tacticalMode) {
+                  window.tacticalMode.startTacticalGame();
+                }
+                
+                showNotification(`Joined as Player ${availableSymbol}`);
+              })
+              .catch(error => {
+                console.error('Failed to update player info:', error);
+                showNotification('Error joining game: ' + error.message);
+              });
+          } else {
+            showNotification('Game is already full');
+          }
+        } else {
+          showNotification('Cannot join this game - invalid status');
+          console.error('Invalid game status:', gameData.status);
+        }
       })
       .catch((error) => {
-        console.error('Error joining game:', error);
+        console.error("Error joining game:", error);
         showNotification('Error joining game: ' + error.message);
       });
   };
@@ -721,7 +809,7 @@ document.addEventListener('DOMContentLoaded', () => {
       
       // Update turn status once we know our symbol
       if (gameState.playerSymbol !== 'waiting') {
-        gameState.isPlayerTurn = gameState.currentTurn === gameState.playerSymbol;
+      gameState.isPlayerTurn = gameState.currentTurn === gameState.playerSymbol;
       }
       
       // Update UI based on current game state
@@ -765,15 +853,15 @@ document.addEventListener('DOMContentLoaded', () => {
         if (data.status === 'waiting') {
           if (gameState.isCreator) {
             updateStatusMessage("Waiting for Player 2 to join...");
-          } else {
+        } else {
             updateStatusMessage("Waiting for game to start...");
           }
         } else if (data.status === 'active') {
           if (gameState.playerSymbol !== 'waiting') {
-            if (gameState.isPlayerTurn) {
-              updateStatusMessage("Your turn");
-            } else {
-              updateStatusMessage(`${gameState.currentTurn}'s turn`);
+          if (gameState.isPlayerTurn) {
+            updateStatusMessage("Your turn");
+          } else {
+            updateStatusMessage(`${gameState.currentTurn}'s turn`);
             }
           }
         }
@@ -786,21 +874,13 @@ document.addEventListener('DOMContentLoaded', () => {
       
       // If we're in an active game and using X/O symbols
       if (gameState.playerSymbol !== 'waiting' && gameState.status === 'active') {
-        // If the other player disconnected, update the status
-        if (gameState.playerSymbol === 'X' && !players.O) {
+      // If the other player disconnected, update the status
+      if (gameState.playerSymbol === 'X' && !players.O) {
           updateStatusMessage("Waiting for player O to rejoin...");
-        } else if (gameState.playerSymbol === 'O' && !players.X) {
+      } else if (gameState.playerSymbol === 'O' && !players.X) {
           updateStatusMessage("Waiting for player X to rejoin...");
         }
       }
-    });
-    
-    // Initialize chat system
-    setupChat();
-    
-    // Clean up listeners when disconnected
-    gameRef.onDisconnect().update({
-      [`players/${gameState.isCreator ? 'creatorConnected' : 'joinerConnected'}`]: false
     });
   };
 
@@ -903,14 +983,7 @@ document.addEventListener('DOMContentLoaded', () => {
         createdAt: firebase.database.ServerValue.TIMESTAMP,
         gameMode: matchData.gameMode || 'classic',
         isBlitzMode: matchData.isBlitzMode || false,
-        isGambitMode: matchData.isGambitMode || false,
-        chat: {
-          welcome: {
-            sender: 'System',
-            message: 'Quick Match! Players matched successfully.',
-            timestamp: firebase.database.ServerValue.TIMESTAMP
-          }
-        }
+        isGambitMode: matchData.isGambitMode || false
       });
     })
     .then(() => {
@@ -918,9 +991,6 @@ document.addEventListener('DOMContentLoaded', () => {
       
       // Set up Firebase listeners
       setupQuickGameListeners();
-      
-      // Initialize chat
-      setupChat();
       
       // Update UI
       gameSetup.classList.remove('active');
@@ -935,12 +1005,6 @@ document.addEventListener('DOMContentLoaded', () => {
       copyRoomBtn.style.display = 'none';
       exitRoomBtn.style.display = 'flex';
       newGameBtn.style.display = 'none';
-      
-      // Show and collapse chat by default
-      const chatContainer = document.querySelector('.chat-container');
-      if (chatContainer) {
-        chatContainer.classList.add('collapsed');
-      }
       
       showNotification('Match found! You are playing as O.');
       
@@ -994,32 +1058,6 @@ document.addEventListener('DOMContentLoaded', () => {
     .then(() => {
       console.log('Created waiting match:', matchId);
       
-      // Set up game reference for later use
-      gameRef = database.ref(`quickGames/${matchId}`);
-      
-      // Pre-initialize game data (will be completed when player 2 joins)
-      return gameRef.set({
-        status: 'waiting',
-        board: Array(9).fill(''),
-        currentTurn: 'X', // First player is always X
-        gameEnded: false,
-        players: {
-          X: gameState.playerName
-        },
-        createdAt: firebase.database.ServerValue.TIMESTAMP,
-        gameMode: isTacticalMode ? 'tactical' : 'classic',
-        isBlitzMode: isBlitzMode,
-        isGambitMode: isGambitMode,
-        chat: {
-          welcome: {
-            sender: 'System',
-            message: 'Waiting for an opponent to join...',
-            timestamp: firebase.database.ServerValue.TIMESTAMP
-          }
-        }
-      });
-    })
-    .then(() => {
       // Update UI to waiting state
       gameSetup.classList.remove('active');
       gameBoard.classList.add('active');
@@ -1032,41 +1070,64 @@ document.addEventListener('DOMContentLoaded', () => {
       exitRoomBtn.style.display = 'flex';
       newGameBtn.style.display = 'none';
       
-      // Initialize chat
-      setupChat();
-      
-      // Show and collapse chat by default
-      const chatContainer = document.querySelector('.chat-container');
-      if (chatContainer) {
-        chatContainer.classList.add('collapsed');
-      }
-      
       // Setup temporary game state
       gameState.roomCode = matchId;
       gameState.isCreator = true;
       gameState.playerSymbol = 'X';
       gameState.isQuickGame = true;
       
-      // Listen for changes (someone joining)
-      setupQuickGameListeners();
+      // Listen for match
+      const matchListener = quickMatchRef.child(matchId).on('value', (snapshot) => {
+        const data = snapshot.val();
+        
+        if (!data) {
+          // Match was deleted
+          quickMatchRef.child(matchId).off('value', matchListener);
+          return;
+        }
+        
+        if (data.status === 'matched' && waitingForMatch) {
+          // Someone joined our game!
+          waitingForMatch = false;
+          
+          if (matchmakingTimeout) {
+            clearTimeout(matchmakingTimeout);
+            matchmakingTimeout = null;
+          }
+          
+          quickMatchRef.child(matchId).off('value', matchListener);
+          
+          // Initialize the game
+          gameRef = database.ref(`quickGames/${matchId}`);
+          
+          // Set up game state
+          gameState.gameActive = true;
+          gameState.isPlayerTurn = true;
+          
+          // Set up listeners
+          setupQuickGameListeners();
+          
+          showNotification('Opponent found! You are playing as X. Your turn!');
+          updateStatusMessage("Your turn! Make a move.");
+          playerSymbol.textContent = 'X';
+          
+          // Add animation to board
+          const boardContainer = document.querySelector('.board-container');
+          boardContainer.classList.add('game-starting');
+          
+          // Remove animation class after transition
+          setTimeout(() => {
+            boardContainer.classList.remove('game-starting');
+          }, 500);
+        }
+      });
       
-      showNotification('Waiting for an opponent. A computer opponent will join if no one is found within 30 seconds.');
-      
-      // Initialize tactical mode if selected
-      if (isTacticalMode && window.tacticalMode) {
-        window.tacticalMode.startTacticalGame();
-      }
+      showNotification('Waiting for opponent... (30s timeout)');
     })
     .catch(error => {
       console.error('Error creating waiting match:', error);
-      showNotification('Error setting up game: ' + error.message);
+      showNotification('Error creating match: ' + error.message);
       waitingForMatch = false;
-      
-      // Clear matchmaking timeout if needed
-      if (matchmakingTimeout) {
-        clearTimeout(matchmakingTimeout);
-        matchmakingTimeout = null;
-      }
     });
   };
   
@@ -1097,176 +1158,24 @@ document.addEventListener('DOMContentLoaded', () => {
     gameState.isQuickGame = true;
     gameState.isAIGame = true;
     
-    // Create a reference in Firebase just for saving the game state
-    gameRef = database.ref(`aiGames/${roomCode}`);
+    // Create a local game without Firebase
+    // Update UI
+    gameSetup.classList.remove('active');
+    gameBoard.classList.add('active');
+    roomCodeDisplay.textContent = 'AI Match';
+    playerSymbol.textContent = 'X';
     
-    // Initialize AI game in Firebase 
-    gameRef.set({
-      status: 'active',
-      board: Array(9).fill(''),
-      currentTurn: 'X',
-      gameEnded: false,
-      players: {
-        X: gameState.playerName,
-        O: 'Computer'
-      },
-      createdAt: firebase.database.ServerValue.TIMESTAMP,
-      isAIGame: true,
-      chat: {
-        welcome: {
-          sender: 'System',
-          message: 'Playing against the computer. You go first!',
-          timestamp: firebase.database.ServerValue.TIMESTAMP
-        }
-      }
-    })
-    .then(() => {
-      // Update UI
-      gameSetup.classList.remove('active');
-      gameBoard.classList.add('active');
-      roomCodeDisplay.textContent = 'AI Match';
-      playerSymbol.textContent = 'X';
-      
-      // Update status
-      updateStatusMessage("Your turn! Select a cell to play");
-      
-      // Show action buttons
-      copyRoomBtn.style.display = 'none';
-      exitRoomBtn.style.display = 'flex';
-      newGameBtn.style.display = 'flex';
-      
-      // Initialize chat
-      setupChat();
-      
-      // Add AI welcome message
-      setTimeout(() => {
-        // Add welcome message from AI
-        if (chatRef) {
-          chatRef.push({
-            sender: 'Computer',
-            symbol: 'O',
-            message: 'Hello! I will play as O. Good luck!',
-            timestamp: firebase.database.ServerValue.TIMESTAMP
-          });
-        }
-        
-        // Show and collapse chat by default
-        const chatContainer = document.querySelector('.chat-container');
-        if (chatContainer) {
-          chatContainer.classList.add('collapsed');
-        }
-      }, 1000);
-      
-      showNotification('No players found. Starting AI game!');
-    })
-    .catch(error => {
-      console.error('Error setting up AI game:', error);
-      showNotification('Error starting AI game: ' + error.message);
-    });
-  };
-
-  // AI Chat Response
-  const getAIChatResponse = (message) => {
-    if (!gameState.isAIGame) return;
+    // Update status
+    updateStatusMessage("Your turn! Select a cell to play");
     
-    // Simulate AI thinking - randomize response time between 1-3 seconds
-    const thinkingTime = 1000 + Math.random() * 2000;
+    // Show action buttons
+    copyRoomBtn.style.display = 'none';
+    exitRoomBtn.style.display = 'flex';
+    newGameBtn.style.display = 'flex';
     
-    setTimeout(() => {
-      if (!chatRef) return;
-      
-      let response = '';
-      
-      // Check for common greetings and game state
-      if (/hi|hello|hey/i.test(message)) {
-        response = getRandomResponse([
-          "Hello there! Ready to lose? 😉",
-          "Hi! Let's have a good game!",
-          "Hey! I'm feeling lucky today!"
-        ]);
-      } else if (/how are you|how's it going/i.test(message)) {
-        response = getRandomResponse([
-          "I'm made of code, so I'm always running smoothly!",
-          "I'm doing great! Ready to play my best!",
-          "All systems operational and ready to win!"
-        ]);
-      } else if (/good game|gg|well played|wp/i.test(message)) {
-        response = getRandomResponse([
-          "Thanks! You're a worthy opponent!",
-          "GG indeed! That was fun!",
-          "Well played! Want to go again?"
-        ]);
-      } else if (/easy|too easy|simple/i.test(message)) {
-        response = getRandomResponse([
-          "Oh really? I'm just warming up!",
-          "You won't find me so easy next time!",
-          "I'm learning your strategy now..."
-        ]);
-      } else if (/difficult|hard|tough/i.test(message)) {
-        response = getRandomResponse([
-          "I've been practicing my algorithms!",
-          "Thanks! I'm programmed to give you a challenge!",
-          "Just wait until I activate my advanced strategies!"
-        ]);
-      } else if (gameState.gameEnded) {
-        if (gameState.winner && gameState.winner.winner === 'Draw') {
-          response = getRandomResponse([
-            "Great minds think alike! That's why we tied.",
-            "A draw! You're as smart as my algorithms!",
-            "Perfectly balanced, as all things should be."
-          ]);
-        } else if (gameState.winner && gameState.winner.winner === 'O') {
-          response = getRandomResponse([
-            "Victory is mine! Want to try again?",
-            "My algorithms predicted this outcome! GG!",
-            "The computer prevails this time! 🤖"
-          ]);
-        } else if (gameState.winner && gameState.winner.winner === 'X') {
-          response = getRandomResponse([
-            "You won fair and square. Well played!",
-            "You're good! I need to update my strategies.",
-            "Congratulations! You've defeated me this time."
-          ]);
-        }
-      } else if (/your turn|go|move/i.test(message) && gameState.currentTurn === 'O') {
-        response = getRandomResponse([
-          "I'm thinking... give me a moment!",
-          "Calculating the optimal move...",
-          "Let me find the best strategy..."
-        ]);
-      } else if (/your turn|go|move/i.test(message) && gameState.currentTurn === 'X') {
-        response = getRandomResponse([
-          "It's your turn now!",
-          "I'm waiting for your move!",
-          "The board awaits your decision."
-        ]);
-      } else {
-        // Generic responses for messages that don't match specific patterns
-        response = getRandomResponse([
-          "Let's focus on the game!",
-          "I'm processing your strategy...",
-          "Interesting move pattern you've got there!",
-          "I'm designed to provide a challenging game experience!",
-          "My AI is constantly learning. Thanks for playing with me!"
-        ]);
-      }
-      
-      // Send AI response
-      chatRef.push({
-        sender: 'Computer',
-        symbol: 'O',
-        message: response,
-        timestamp: firebase.database.ServerValue.TIMESTAMP
-      });
-    }, thinkingTime);
+    showNotification('No players found. Starting AI game!');
   };
   
-  // Helper to get random response from array
-  const getRandomResponse = (responses) => {
-    const index = Math.floor(Math.random() * responses.length);
-    return responses[index];
-  };
-
   // CPU player move (simple AI for quick games)
   const makeCpuMove = () => {
     if (!gameState.isQuickGame || !gameState.isAIGame || gameState.gameEnded || gameState.isPlayerTurn) return;
@@ -1437,14 +1346,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       }
     });
-    
-    // Initialize chat system
-    setupChat();
-    
-    // Clean up listeners when disconnected
-    gameRef.onDisconnect().update({
-      [`players/${gameState.playerSymbol}`]: null
-    });
   };
 
   // Modified: makeMove function to handle quick games with real players
@@ -1587,10 +1488,10 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Prepare the update object for Firebase
     const updateData = {
-      board: newBoard,
-      currentTurn: gameState.playerSymbol === 'X' ? 'O' : 'X',
-      gameEnded: result !== null,
-      winner: result
+        board: newBoard,
+        currentTurn: gameState.playerSymbol === 'X' ? 'O' : 'X',
+        gameEnded: result !== null,
+        winner: result
     };
     
     // Add score updates if there is a winner
@@ -1943,174 +1844,6 @@ document.addEventListener('DOMContentLoaded', () => {
     darkModeToggle.innerHTML = isDarkMode 
       ? '<i class="fas fa-sun"></i>' 
       : '<i class="fas fa-moon"></i>';
-  };
-
-  // Setup chat for game room
-  const setupChat = () => {
-    if (!gameRef) return;
-    
-    const chatContainer = document.querySelector('.chat-container');
-    const chatHeader = document.querySelector('.chat-header');
-    const toggleChatBtn = document.getElementById('toggleChatBtn');
-    const chatMessages = document.getElementById('chatMessages');
-    const chatInput = document.getElementById('chatInput');
-    const sendChatBtn = document.getElementById('sendChatBtn');
-    
-    // Initialize chat reference
-    chatRef = gameRef.child('chat');
-    
-    // Toggle chat visibility
-    if (toggleChatBtn && chatContainer) {
-      toggleChatBtn.addEventListener('click', () => {
-        chatContainer.classList.toggle('collapsed');
-        
-        // If we're expanding and there are unread messages, clear them
-        if (!chatContainer.classList.contains('collapsed') && unreadMessages > 0) {
-          clearChatNotification();
-        }
-      });
-      
-      chatHeader.addEventListener('click', (e) => {
-        // Don't toggle if clicking the toggle button (it has its own handler)
-        if (e.target !== toggleChatBtn && !toggleChatBtn.contains(e.target)) {
-          chatContainer.classList.toggle('collapsed');
-          
-          // If we're expanding and there are unread messages, clear them
-          if (!chatContainer.classList.contains('collapsed') && unreadMessages > 0) {
-            clearChatNotification();
-          }
-        }
-      });
-    }
-    
-    // Function to send a message
-    const sendMessage = () => {
-      const message = chatInput.value.trim();
-      
-      if (message && chatRef) {
-        // Add message to chat
-        chatRef.push({
-          sender: gameState.playerName,
-          symbol: gameState.playerSymbol,
-          message: message,
-          timestamp: firebase.database.ServerValue.TIMESTAMP
-        });
-        
-        // Clear input
-        chatInput.value = '';
-        
-        // If playing against AI, get AI response
-        if (gameState.isAIGame) {
-          getAIChatResponse(message);
-        }
-      }
-    };
-    
-    // Send message on button click
-    if (sendChatBtn) {
-      sendChatBtn.addEventListener('click', sendMessage);
-    }
-    
-    // Send message on Enter key
-    if (chatInput) {
-      chatInput.addEventListener('keyup', (e) => {
-        if (e.key === 'Enter') {
-          sendMessage();
-        }
-      });
-    }
-    
-    // Listen for new messages
-    chatRef.on('child_added', (snapshot) => {
-      const message = snapshot.val();
-      addMessageToChat(message);
-    });
-  };
-  
-  // Add message to chat UI
-  const addMessageToChat = (message) => {
-    const chatMessages = document.getElementById('chatMessages');
-    const chatContainer = document.querySelector('.chat-container');
-    
-    if (!chatMessages) return;
-    
-    // Create message element
-    const messageElement = document.createElement('div');
-    messageElement.className = 'chat-message';
-    
-    // Determine if sent or received
-    const isSent = message.sender === gameState.playerName;
-    messageElement.classList.add(isSent ? 'sent' : 'received');
-    
-    // Format timestamp
-    const timestamp = new Date(message.timestamp);
-    const formattedTime = timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    
-    // Create message content
-    const senderSymbol = message.symbol ? ` (${message.symbol})` : '';
-    messageElement.innerHTML = `
-      <div class="message-sender">${message.sender}${senderSymbol}</div>
-      <div class="message-content">${escapeHTML(message.message)}</div>
-      <div class="message-time">${formattedTime}</div>
-    `;
-    
-    // Add to chat
-    chatMessages.appendChild(messageElement);
-    
-    // Scroll to bottom
-    chatMessages.scrollTop = chatMessages.scrollHeight;
-    
-    // Show notification if chat is collapsed
-    if (chatContainer && chatContainer.classList.contains('collapsed') && !isSent) {
-      showChatNotification();
-    }
-  };
-  
-  // Escape HTML to prevent XSS
-  const escapeHTML = (str) => {
-    return str
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#039;');
-  };
-  
-  // Show notification for new messages
-  const showChatNotification = () => {
-    const chatHeader = document.querySelector('.chat-header h3');
-    if (!chatHeader) return;
-    
-    // Increment unread count
-    unreadMessages++;
-    
-    // Check if badge already exists
-    let badge = chatHeader.querySelector('.notification-badge');
-    
-    if (!badge) {
-      // Create a new badge
-      badge = document.createElement('span');
-      badge.className = 'notification-badge';
-      chatHeader.appendChild(badge);
-    }
-    
-    // Update badge count
-    badge.textContent = unreadMessages;
-  };
-  
-  // Clear chat notification
-  const clearChatNotification = () => {
-    const chatHeader = document.querySelector('.chat-header h3');
-    if (!chatHeader) return;
-    
-    // Reset unread count
-    unreadMessages = 0;
-    
-    // Remove badge if it exists
-    const badge = chatHeader.querySelector('.notification-badge');
-    if (badge) {
-      chatHeader.removeChild(badge);
-    }
   };
 
   // Event Listeners

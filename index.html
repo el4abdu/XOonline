@@ -33,21 +33,21 @@
             <div class="tactical-options">
                 <div id="blitzModeToggle" class="mode-toggle">
                     <label for="blitzModeCheckbox">
-                        <input type="checkbox" id="blitzModeCheckbox">
+                    <input type="checkbox" id="blitzModeCheckbox">
                         <span class="toggle-label">Blitz Mode</span>
                         <i class="fas fa-stopwatch"></i>
-                    </label>
-                </div>
-                
+                </label>
+            </div>
+            
                 <div id="gambitModeToggle" class="mode-toggle">
                     <label for="gambitModeCheckbox">
-                        <input type="checkbox" id="gambitModeCheckbox">
+                    <input type="checkbox" id="gambitModeCheckbox">
                         <span class="toggle-label">Gambit Mode</span>
                         <i class="fas fa-coins"></i>
-                    </label>
+                </label>
                 </div>
             </div>
-
+            
             <div class="setup-options">
                 <button id="quickGameBtn" class="quick-btn">
                     <div class="button-top">
@@ -58,7 +58,7 @@
                 </button>
                 <button id="createGameBtn" class="create-btn">
                     <div class="button-top">
-                        <i class="fas fa-plus-circle"></i> Create New Game
+                    <i class="fas fa-plus-circle"></i> Create New Game
                     </div>
                     <div class="button-bottom"></div>
                     <div class="button-base"></div>
@@ -70,19 +70,19 @@
                     <input type="text" id="joinGameInput" placeholder="Enter room code">
                     <button id="joinGameBtn">
                         <div class="button-top">
-                            <i class="fas fa-sign-in-alt"></i> Join Game
+                        <i class="fas fa-sign-in-alt"></i> Join Game
                         </div>
                         <div class="button-bottom"></div>
                         <div class="button-base"></div>
                     </button>
-                </div>
             </div>
-            
+        </div>
+
             <div class="help-section">
                 <button id="helpBtn" class="help-btn">
                     <div class="button-top">
                         <i class="fas fa-question-circle"></i> How To Play
-                    </div>
+                </div>
                     <div class="button-bottom"></div>
                     <div class="button-base"></div>
                 </button>
@@ -98,27 +98,27 @@
                 <div class="player-score-container player-x">
                     <div class="player-name">Player X</div>
                     <div class="player-score" id="playerXScore">0</div>
-                </div>
-                <div class="score-divider">:</div>
+            </div>
+            <div class="score-divider">:</div>
                 <div class="player-score-container player-o">
                     <div class="player-name">Player O</div>
                     <div class="player-score" id="playerOScore">0</div>
                 </div>
-            </div>
-            
+        </div>
+
             <!-- Action Panel for Tactical Mode -->
-            <div id="actionPanel" class="action-panel">
+        <div id="actionPanel" class="action-panel">
                 <button class="action-btn-tactical selected" data-action="strike">
-                    <i class="fas fa-crosshairs"></i>
-                    <span>Strike</span>
+                <i class="fas fa-crosshairs"></i>
+                <span>Strike</span>
                 </button>
                 <button class="action-btn-tactical" data-action="defend">
-                    <i class="fas fa-shield-alt"></i>
-                    <span>Defend</span>
+                <i class="fas fa-shield-alt"></i>
+                <span>Defend</span>
                 </button>
                 <button class="action-btn-tactical" data-action="sacrifice">
-                    <i class="fas fa-exchange-alt"></i>
-                    <span>Sacrifice</span>
+                <i class="fas fa-exchange-alt"></i>
+                <span>Sacrifice</span>
                 </button>
             </div>
             
@@ -126,9 +126,9 @@
             <div id="blitzTimer" class="blitz-timer">
                 <div class="timer-container">
                     <div id="timerBar" class="timer-bar"></div>
-                </div>
             </div>
-            
+        </div>
+
             <p id="statusMessage">Create a new game or join an existing one</p>
             
             <div class="board-container">
@@ -199,70 +199,46 @@
                 <div class="player-score" id="playerOStats">
                     <span>Player O</span>
                     <div class="score-number">0</div>
-                </div>
-            </div>
-            
-            <div id="replayContainer" class="replay-container">
-                <button id="replayBtn" class="replay-btn">
-                    <i class="fas fa-redo"></i> Replay Last Move
-                </button>
-                <button id="rematchBtn" class="rematch-btn">
-                    <i class="fas fa-handshake"></i> Request Rematch
-                </button>
-            </div>
-            
-            <div class="game-actions">
-                <button id="copyRoomBtn" class="action-btn">
-                    <div class="button-top">
-                        <i class="fas fa-copy"></i> Copy Room Code
-                    </div>
-                    <div class="button-bottom"></div>
-                    <div class="button-base"></div>
-                </button>
-                <button id="exitRoomBtn" class="action-btn">
-                    <div class="button-top">
-                        <i class="fas fa-sign-out-alt"></i> Exit Room
-                    </div>
-                    <div class="button-bottom"></div>
-                    <div class="button-base"></div>
-                </button>
-                <button id="newGameBtn" class="action-btn">
-                    <div class="button-top">
-                        <i class="fas fa-redo"></i> New Game
-                    </div>
-                    <div class="button-bottom"></div>
-                    <div class="button-base"></div>
-                </button>
-            </div>
-            
-            <!-- Chat Section -->
-            <div class="chat-container">
-                <div class="chat-header">
-                    <h3><i class="fas fa-comments"></i> Game Chat</h3>
-                    <button id="toggleChatBtn" class="toggle-chat-btn">
-                        <i class="fas fa-chevron-down"></i>
-                    </button>
-                </div>
-                <div class="chat-body">
-                    <div class="chat-messages" id="chatMessages">
-                        <!-- Messages will be added here -->
-                        <div class="chat-welcome-message">
-                            <p>Welcome to the game chat! You can communicate with your opponent here.</p>
-                        </div>
-                    </div>
-                    <div class="chat-input-container">
-                        <input type="text" id="chatInput" placeholder="Type a message..." maxlength="100">
-                        <button id="sendChatBtn">
-                            <i class="fas fa-paper-plane"></i>
-                        </button>
-                    </div>
-                </div>
-            </div>
-            
-            <div id="notification" class="notification">
-                <p id="notificationMessage"></p>
             </div>
         </div>
+
+            <div id="replayContainer" class="replay-container">
+            <button id="replayBtn" class="replay-btn">
+                    <i class="fas fa-redo"></i> Replay Last Move
+            </button>
+            <button id="rematchBtn" class="rematch-btn">
+                    <i class="fas fa-handshake"></i> Request Rematch
+            </button>
+        </div>
+
+        <div class="game-actions">
+            <button id="copyRoomBtn" class="action-btn">
+                    <div class="button-top">
+                <i class="fas fa-copy"></i> Copy Room Code
+                    </div>
+                    <div class="button-bottom"></div>
+                    <div class="button-base"></div>
+            </button>
+            <button id="exitRoomBtn" class="action-btn">
+                    <div class="button-top">
+                <i class="fas fa-sign-out-alt"></i> Exit Room
+                    </div>
+                    <div class="button-bottom"></div>
+                    <div class="button-base"></div>
+            </button>
+            <button id="newGameBtn" class="action-btn">
+                    <div class="button-top">
+                <i class="fas fa-redo"></i> New Game
+                    </div>
+                    <div class="button-bottom"></div>
+                    <div class="button-base"></div>
+            </button>
+        </div>
+
+        <div id="notification" class="notification">
+            <p id="notificationMessage"></p>
+        </div>
+    </div>
         
         <!-- Help Modal -->
         <div id="helpModal" class="help-modal">
@@ -309,9 +285,9 @@
             </div>
         </div>
 
-        <footer>
-            <p>Made with <i class="fas fa-heart"></i> | © 2025 XO.GAME</p>
-        </footer>
+    <footer>
+        <p>Made with <i class="fas fa-heart"></i> | © 2025 XO.GAME</p>
+    </footer>
     </div>
 
     <!-- Firebase -->
@@ -333,7 +309,7 @@
         firebase.initializeApp(firebaseConfig);
         const database = firebase.database();
     </script>
-
+    
     <!-- Game Scripts -->
     <script src="tactical-mode.js"></script>
     <script src="app.js"></script>
