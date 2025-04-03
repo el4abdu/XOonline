@@ -29,6 +29,11 @@ document.addEventListener('DOMContentLoaded', () => {
     winner: null,
     playerName: 'Player ' + Math.floor(Math.random() * 1000),
     isCreator: false,
+    readyState: {
+      creator: false,
+      joiner: false
+    },
+    isQuickGame: false
   };
 
   // References
@@ -70,6 +75,28 @@ document.addEventListener('DOMContentLoaded', () => {
       document.getElementById('gameStats').style.display = 'none';
       document.getElementById('replayContainer').style.display = 'none';
     }
+
+    // Help Modal Functions
+    const helpBtn = document.getElementById('helpBtn');
+    const helpModal = document.getElementById('helpModal');
+    const closeHelp = document.getElementById('closeHelp');
+    
+    // Open help modal
+    helpBtn.addEventListener('click', () => {
+      helpModal.classList.add('active');
+    });
+    
+    // Close help modal
+    closeHelp.addEventListener('click', () => {
+      helpModal.classList.remove('active');
+    });
+    
+    // Close modal when clicking outside
+    helpModal.addEventListener('click', (e) => {
+      if (e.target === helpModal) {
+        helpModal.classList.remove('active');
+      }
+    });
   };
 
   // Update status message
@@ -277,9 +304,13 @@ document.addEventListener('DOMContentLoaded', () => {
     
     const playerType = gameState.isCreator ? 'creator' : 'joiner';
     
-    // Update ready state in Firebase
+    // Update ready state in Firebase using safer approach
     const readyUpdate = {};
-    readyUpdate[`readyState/${playerType}`] = true;
+    if (playerType === 'creator') {
+      readyUpdate['readyState'] = { ...gameState.readyState, creator: true };
+    } else {
+      readyUpdate['readyState'] = { ...gameState.readyState, joiner: true };
+    }
     
     gameRef.update(readyUpdate)
       .then(() => {
@@ -334,10 +365,14 @@ document.addEventListener('DOMContentLoaded', () => {
         const players = gameData.players || {};
         
         // Create new players object with randomized symbols
-        const newPlayers = {
-          X: creatorGetsX ? players.creator : players.joiner,
-          O: creatorGetsX ? players.joiner : players.creator
-        };
+        const newPlayers = {};
+        if (creatorGetsX) {
+          newPlayers.X = players.creator;
+          newPlayers.O = players.joiner;
+        } else {
+          newPlayers.X = players.joiner;
+          newPlayers.O = players.creator;
+        }
         
         // Update game with new player assignments and start
         gameRef.update({
@@ -460,63 +495,87 @@ document.addEventListener('DOMContentLoaded', () => {
           gameRef = database.ref(`games/${roomCode}`);
           movesRef = gameRef.child('moves');
           
-          // Update with joiner info
-          const updateData = {
-            players: { ...gameData.players, joiner: gameState.playerName }
-          };
-          
-          gameRef.update(updateData)
-          .then(() => {
-            console.log('Successfully joined game');
-            
-            // Listen for changes
-            setupGameListeners();
-            
-            // Update UI
-            gameSetup.classList.remove('active');
-            gameBoard.classList.add('active');
-            roomCodeDisplay.textContent = roomCode;
-            playerSymbol.textContent = 'Waiting...';
-            
-            updateStatusMessage("Waiting for game to start...");
-            
-            // Show action buttons
-            copyRoomBtn.style.display = 'flex';
-            exitRoomBtn.style.display = 'flex';
-            newGameBtn.style.display = 'none';
-            
-            // Show ready button for player 2
-            const readyBtn = document.createElement('button');
-            readyBtn.id = 'readyBtn';
-            readyBtn.className = 'action-btn';
-            readyBtn.innerHTML = 'Ready!';
-            readyBtn.addEventListener('click', markPlayerReady);
-            
-            // Find the correct container - handle multiple possibilities
-            const actionButtonsContainer = document.querySelector('.action-buttons') || 
-                                           document.querySelector('.game-actions');
-            
-            if (actionButtonsContainer) {
-              actionButtonsContainer.appendChild(readyBtn);
-            } else {
-              // Fallback - append to gameBoard
-              document.getElementById('gameBoard').appendChild(readyBtn);
-            }
-            
-            // Initialize tactical mode if needed
-            if (gameData.gameMode === 'tactical' && window.tacticalMode) {
-              window.tacticalMode.startTacticalGame();
-            }
-            
-            // Enable the creator's start button
-            gameRef.update({ 'readyState/creatorCanStart': true });
-            
-            showNotification('Joined the game successfully! Press Ready when you are ready to play.');
-          })
-          .catch(error => {
-            console.error('Failed to update game status:', error);
-            showNotification('Error joining game: ' + error.message);
-          });
+          // Get existing data and update safely
+          gameRef.once('value')
+            .then((snapshot) => {
+              const fullGameData = snapshot.val() || {};
+              
+              // Create a clean players object
+              const updatedPlayers = {};
+              
+              // Preserve creator
+              if (fullGameData.players && fullGameData.players.creator) {
+                updatedPlayers.creator = fullGameData.players.creator;
+              }
+              
+              // Add joiner
+              updatedPlayers.joiner = gameState.playerName;
+              
+              // Create a complete update object
+              const completeUpdate = {
+                ...fullGameData,
+                players: updatedPlayers
+              };
+              
+              // Set the entire state or just update players node
+              return gameRef.child('players').set(updatedPlayers);
+            })
+            .then(() => {
+              console.log('Successfully joined game');
+              
+              // Listen for changes
+              setupGameListeners();
+              
+              // Update UI
+              gameSetup.classList.remove('active');
+              gameBoard.classList.add('active');
+              roomCodeDisplay.textContent = roomCode;
+              playerSymbol.textContent = 'Waiting...';
+              
+              updateStatusMessage("Waiting for game to start...");
+              
+              // Show action buttons
+              copyRoomBtn.style.display = 'flex';
+              exitRoomBtn.style.display = 'flex';
+              newGameBtn.style.display = 'none';
+              
+              // Show ready button for player 2
+              const readyBtn = document.createElement('button');
+              readyBtn.id = 'readyBtn';
+              readyBtn.className = 'action-btn';
+              readyBtn.innerHTML = 'Ready!';
+              readyBtn.addEventListener('click', markPlayerReady);
+              
+              // Find the correct container - handle multiple possibilities
+              const actionButtonsContainer = document.querySelector('.action-buttons') || 
+                                             document.querySelector('.game-actions');
+              
+              if (actionButtonsContainer) {
+                actionButtonsContainer.appendChild(readyBtn);
+              } else {
+                // Fallback - append to gameBoard
+                document.getElementById('gameBoard').appendChild(readyBtn);
+              }
+              
+              // Initialize tactical mode if needed
+              if (gameData.gameMode === 'tactical' && window.tacticalMode) {
+                window.tacticalMode.startTacticalGame();
+              }
+              
+              // Enable the creator's start button safely
+              gameRef.child('readyState').once('value', snapshot => {
+                const currentReadyState = snapshot.val() || {};
+                currentReadyState.creatorCanStart = true;
+                return gameRef.child('readyState').set(currentReadyState);
+              })
+              .then(() => {
+                showNotification('Joined the game successfully! Press Ready when you are ready to play.');
+              });
+            })
+            .catch(error => {
+              console.error('Failed to update game status:', error);
+              showNotification('Error joining game: ' + error.message);
+            });
         } else if (gameData.status === 'active') {
           // Check if we can reconnect as a player
           const players = gameData.players || {};
@@ -538,12 +597,24 @@ document.addEventListener('DOMContentLoaded', () => {
             gameRef = database.ref(`games/${roomCode}`);
             movesRef = gameRef.child('moves');
             
-            // Update player info - Fix the update method to avoid Firebase path issues
+            // Method 1: Using set instead of update for the players node
             gameRef.child('players').once('value')
               .then((snapshot) => {
-                const currentPlayers = snapshot.val() || {};
+                // Carefully build a clean players object
+                const currentPlayers = {};
+                const existingPlayers = snapshot.val() || {};
+                
+                // Copy existing player (if any)
+                if (availableSymbol === 'X' && existingPlayers.O) {
+                  currentPlayers.O = existingPlayers.O;
+                } else if (availableSymbol === 'O' && existingPlayers.X) {
+                  currentPlayers.X = existingPlayers.X;
+                }
+                
+                // Add new player safely
                 currentPlayers[availableSymbol] = gameState.playerName;
                 
+                // Set the entire players object (not using update with dot notation)
                 return gameRef.child('players').set(currentPlayers);
               })
               .then(() => {
@@ -701,7 +772,165 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   };
 
-  // Make a move
+  // Create quick game with AI
+  const createQuickGame = () => {
+    // Show notification
+    showNotification('Creating a quick game...');
+    
+    // Generate a room code
+    const roomCode = generateRoomCode();
+    
+    // Setup the player symbol (always X for quick games)
+    gameState.roomCode = roomCode;
+    gameState.playerSymbol = 'X';
+    gameState.isPlayerTurn = true;
+    gameState.gameActive = true;
+    gameState.board = Array(9).fill('');
+    gameState.currentTurn = 'X';
+    gameState.gameEnded = false;
+    gameState.winner = null;
+    gameState.isCreator = true;
+    gameState.isQuickGame = true; // Flag to identify quick games
+    
+    // Create a local game without Firebase
+    // Update UI
+    gameSetup.classList.remove('active');
+    gameBoard.classList.add('active');
+    roomCodeDisplay.textContent = roomCode;
+    playerSymbol.textContent = 'X';
+    
+    // Update status
+    updateStatusMessage("Your turn! Select a cell to play");
+    
+    // Show action buttons (only exit and new game for quick mode)
+    copyRoomBtn.style.display = 'none';
+    exitRoomBtn.style.display = 'flex';
+    newGameBtn.style.display = 'flex';
+    
+    showNotification('Quick game ready! Start playing 👍');
+    
+    // Add animation to board
+    const boardContainer = document.querySelector('.board-container');
+    boardContainer.classList.add('game-starting');
+    
+    // Remove animation class after transition
+    setTimeout(() => {
+      boardContainer.classList.remove('game-starting');
+    }, 500);
+  };
+  
+  // CPU player move (simple AI for quick games)
+  const makeCpuMove = () => {
+    if (!gameState.isQuickGame || gameState.gameEnded || gameState.isPlayerTurn) return;
+    
+    // Add a small delay to make it feel more natural
+    setTimeout(() => {
+      // Simple AI: First try to win, then block player, then pick center, then random
+      let bestMove = -1;
+      
+      // Check for winning move
+      for (let i = 0; i < 9; i++) {
+        if (gameState.board[i] === '') {
+          // Try this move
+          const testBoard = [...gameState.board];
+          testBoard[i] = 'O';
+          
+          // Check if it's a winning move
+          const result = checkWin(testBoard);
+          if (result && result.winner === 'O') {
+            bestMove = i;
+            break;
+          }
+        }
+      }
+      
+      // Block player's winning move
+      if (bestMove === -1) {
+        for (let i = 0; i < 9; i++) {
+          if (gameState.board[i] === '') {
+            // Try this move for the player
+            const testBoard = [...gameState.board];
+            testBoard[i] = 'X';
+            
+            // Check if it would be a winning move for the player
+            const result = checkWin(testBoard);
+            if (result && result.winner === 'X') {
+              bestMove = i;
+              break;
+            }
+          }
+        }
+      }
+      
+      // Take center if available
+      if (bestMove === -1 && gameState.board[4] === '') {
+        bestMove = 4;
+      }
+      
+      // Take a random available move
+      if (bestMove === -1) {
+        const availableMoves = [];
+        for (let i = 0; i < 9; i++) {
+          if (gameState.board[i] === '') {
+            availableMoves.push(i);
+          }
+        }
+        
+        if (availableMoves.length > 0) {
+          const randomIndex = Math.floor(Math.random() * availableMoves.length);
+          bestMove = availableMoves[randomIndex];
+        }
+      }
+      
+      // Make the CPU move
+      if (bestMove !== -1) {
+        const newBoard = [...gameState.board];
+        newBoard[bestMove] = 'O';
+        
+        // Animate the CPU move
+        const cell = boardCells[bestMove];
+        cell.classList.add('cpu-move-animation');
+        
+        // Update game state
+        gameState.board = newBoard;
+        gameState.currentTurn = 'X';
+        gameState.isPlayerTurn = true;
+        
+        // Remove animation class after transition
+        setTimeout(() => {
+          cell.classList.remove('cpu-move-animation');
+          cell.classList.add('o-move');
+        }, 300);
+        
+        // Check for win/draw
+        const result = checkWin(newBoard);
+        if (result) {
+          gameState.gameEnded = true;
+          gameState.winner = result;
+          
+          if (result.winner === 'Draw') {
+            updateStatusMessage("Game ended in a draw!");
+          } else {
+            updateStatusMessage("Computer won!");
+            
+            // Highlight winning cells
+            if (result.line) {
+              result.line.forEach(index => {
+                boardCells[index].classList.add('winner');
+              });
+            }
+          }
+          
+          // Show new game button
+          newGameBtn.style.display = 'flex';
+        } else {
+          updateStatusMessage("Your turn!");
+        }
+      }
+    }, 700); // Delay to make it feel more natural
+  };
+  
+  // Modified makeMove for quick games
   const makeMove = (index) => {
     // Check if it's a valid move
     if (
@@ -710,6 +939,47 @@ document.addEventListener('DOMContentLoaded', () => {
       gameState.board[index] !== '' || 
       gameState.gameEnded
     ) {
+      return;
+    }
+    
+    // Quick game logic
+    if (gameState.isQuickGame) {
+      // Update local state
+      const newBoard = [...gameState.board];
+      newBoard[index] = gameState.playerSymbol;
+      gameState.board = newBoard;
+      gameState.currentTurn = 'O';
+      gameState.isPlayerTurn = false;
+      
+      // Update UI
+      boardCells[index].classList.add('x-move');
+      
+      // Check for win/draw
+      const result = checkWin(newBoard);
+      if (result) {
+        gameState.gameEnded = true;
+        gameState.winner = result;
+        
+        if (result.winner === 'Draw') {
+          updateStatusMessage("Game ended in a draw!");
+        } else {
+          updateStatusMessage("You won! 🎉");
+          
+          // Highlight winning cells
+          if (result.line) {
+            result.line.forEach(index => {
+              boardCells[index].classList.add('winner');
+            });
+          }
+        }
+        
+        // Show new game button
+        newGameBtn.style.display = 'flex';
+      } else {
+        updateStatusMessage("Computer's turn...");
+        makeCpuMove();
+      }
+      
       return;
     }
     
@@ -775,8 +1045,27 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   };
 
-  // Reset the game
+  // Modified resetGame for quick games
   const resetGame = () => {
+    if (gameState.isQuickGame) {
+      // Reset the local game state for quick games
+      gameState.board = Array(9).fill('');
+      gameState.currentTurn = 'X';
+      gameState.isPlayerTurn = true;
+      gameState.gameEnded = false;
+      gameState.winner = null;
+      
+      // Reset UI
+      boardCells.forEach(cell => {
+        cell.classList.remove('x-move', 'o-move', 'winner', 'cpu-move-animation');
+      });
+      
+      updateStatusMessage("Your turn! Select a cell to play");
+      showNotification('New game! Start playing 👍');
+      return;
+    }
+    
+    // Original logic for online games
     if (!gameRef) return;
     
     // Only allow resetting if the game has ended
@@ -803,6 +1092,172 @@ document.addEventListener('DOMContentLoaded', () => {
     
     showNotification('Starting a new game');
   };
+  
+  // Modified exitRoom for quick games
+  const exitRoom = () => {
+    if (gameState.isQuickGame) {
+      // Just reset UI for quick games
+      gameBoard.classList.remove('active');
+      gameSetup.classList.add('active');
+      roomCodeDisplay.textContent = '-';
+      playerSymbol.textContent = '-';
+      updateStatusMessage('Create a new game or join an existing one');
+      
+      // Reset game board UI
+      boardCells.forEach(cell => {
+        cell.classList.remove('x-move', 'o-move', 'winner', 'cpu-move-animation');
+      });
+      
+      // Reset game state
+      gameState = {
+        roomCode: null,
+        playerSymbol: null,
+        isPlayerTurn: false,
+        gameActive: false,
+        board: Array(9).fill(''),
+        currentTurn: 'X',
+        gameEnded: false,
+        winner: null,
+        playerName: gameState.playerName,
+        isCreator: false,
+        readyState: {
+          creator: false,
+          joiner: false
+        },
+        isQuickGame: false
+      };
+      
+      // Hide game action buttons
+      copyRoomBtn.style.display = 'none';
+      exitRoomBtn.style.display = 'none';
+      newGameBtn.style.display = 'none';
+      
+      showNotification('You left the game');
+      return;
+    }
+    
+    // Original logic for online games
+    if (!gameRef) {
+      showNotification('Not currently in a game');
+      return;
+    }
+    
+    // Handle player removal from Firebase
+    if (gameRef) {
+      // First get the current players
+      gameRef.child('players').once('value')
+        .then((snapshot) => {
+          const players = snapshot.val() || {};
+          
+          // If we're using symbols X/O
+          if (gameState.playerSymbol === 'X' || gameState.playerSymbol === 'O') {
+            // Create new players without this player
+            const updatedPlayers = { ...players };
+            delete updatedPlayers[gameState.playerSymbol];
+            
+            // Update Firebase with the new players list
+            return gameRef.child('players').set(updatedPlayers);
+          } 
+          // If we're creator/joiner
+          else if (gameState.isCreator) {
+            const updatedPlayers = { ...players };
+            delete updatedPlayers.creator;
+            return gameRef.child('players').set(updatedPlayers);
+          } else {
+            const updatedPlayers = { ...players };
+            delete updatedPlayers.joiner;
+            return gameRef.child('players').set(updatedPlayers);
+          }
+        })
+        .then(() => {
+          // Unsubscribe from listeners
+          gameRef.off();
+          if (movesRef) movesRef.off();
+          
+          // Reset game state
+          gameState = {
+            roomCode: null,
+            playerSymbol: null,
+            isPlayerTurn: false,
+            gameActive: false,
+            board: Array(9).fill(''),
+            currentTurn: 'X',
+            gameEnded: false,
+            winner: null,
+            playerName: gameState.playerName,
+            isCreator: false,
+            readyState: {
+              creator: false,
+              joiner: false
+            },
+            isQuickGame: false
+          };
+          
+          // Update UI
+          gameBoard.classList.remove('active');
+          gameSetup.classList.add('active');
+          roomCodeDisplay.textContent = '-';
+          playerSymbol.textContent = '-';
+          updateStatusMessage('Create a new game or join an existing one');
+          
+          // Reset game board UI
+          boardCells.forEach(cell => {
+            cell.classList.remove('x-move', 'o-move', 'winner');
+          });
+          
+          // If tactical mode exists
+          if (window.tacticalMode) {
+            try {
+              // Reset cells related to tactical mode
+              boardCells.forEach(cell => {
+                cell.classList.remove('shield', 'power-tile', 'bomb-tile', 'swap-tile', 'lock-tile', 'bomb-active');
+              });
+              
+              const tacticalBadge = document.getElementById('tacticalBadge');
+              const actionPanel = document.getElementById('actionPanel');
+              const blitzTimer = document.getElementById('blitzTimer');
+              const gameStats = document.getElementById('gameStats');
+              const replayContainer = document.getElementById('replayContainer');
+              
+              // Use safe access to DOM elements with null checks
+              if (tacticalBadge) tacticalBadge.style.display = 'none';
+              if (actionPanel) actionPanel.classList.remove('active');
+              if (blitzTimer) blitzTimer.style.display = 'none';
+              if (gameStats) gameStats.style.display = 'none';
+              if (replayContainer) replayContainer.style.display = 'none';
+              
+              // Set the game mode safely
+              window.tacticalMode.setGameMode('classic');
+            } catch (error) {
+              console.error('Error cleaning up tactical mode:', error);
+            }
+          }
+          
+          // Hide game action buttons
+          copyRoomBtn.style.display = 'none';
+          exitRoomBtn.style.display = 'none';
+          newGameBtn.style.display = 'none';
+          
+          // Remove ready button if present
+          const readyBtn = document.getElementById('readyBtn');
+          if (readyBtn && readyBtn.parentNode) {
+            readyBtn.parentNode.removeChild(readyBtn);
+          }
+          
+          showNotification('Successfully left the game');
+        })
+        .catch(error => {
+          console.error('Error leaving game:', error);
+          showNotification('Error leaving game: ' + error.message);
+        });
+    } else {
+      // Just reset UI if there's no Firebase connection
+      gameBoard.classList.remove('active');
+      gameSetup.classList.add('active');
+      updateStatusMessage('Create a new game or join an existing one');
+      showNotification('Left the game');
+    }
+  };
 
   // Copy room code to clipboard
   const copyRoomCode = () => {
@@ -826,80 +1281,6 @@ document.addEventListener('DOMContentLoaded', () => {
       });
   };
 
-  // Exit the current room
-  const exitRoom = () => {
-    if (!gameRef) {
-      showNotification('Not currently in a game');
-      return;
-    }
-    
-    // Update player status in Firebase
-    if (gameState.playerSymbol && gameRef) {
-      gameRef.child('players').child(gameState.playerSymbol).remove()
-        .then(() => {
-          // Unsubscribe from listeners
-          gameRef.off();
-          if (movesRef) movesRef.off();
-          
-          // Reset game state
-          gameState = {
-            roomCode: null,
-            playerSymbol: null,
-            isPlayerTurn: false,
-            gameActive: false,
-            board: Array(9).fill(''),
-            currentTurn: 'X',
-            gameEnded: false,
-            winner: null,
-            playerName: gameState.playerName,
-            isCreator: false,
-          };
-          
-          // Update UI
-          gameBoard.classList.remove('active');
-          gameSetup.classList.add('active');
-          roomCodeDisplay.textContent = '-';
-          playerSymbol.textContent = '-';
-          updateStatusMessage('Create a new game or join an existing one');
-          
-          // Reset game board UI
-          boardCells.forEach(cell => {
-            cell.classList.remove('x-move', 'o-move', 'winner');
-            if (window.tacticalMode) {
-              cell.classList.remove('shield', 'power-tile', 'bomb-tile', 'swap-tile', 'lock-tile', 'bomb-active');
-            }
-          });
-          
-          // Hide game action buttons
-          copyRoomBtn.style.display = 'none';
-          exitRoomBtn.style.display = 'none';
-          newGameBtn.style.display = 'none';
-          
-          // Reset tactical mode if active
-          if (window.tacticalMode) {
-            window.tacticalMode.setGameMode('classic');
-            document.getElementById('tacticalBadge').style.display = 'none';
-            document.getElementById('actionPanel').classList.remove('active');
-            document.getElementById('blitzTimer').style.display = 'none';
-            document.getElementById('gameStats').style.display = 'none';
-            document.getElementById('replayContainer').style.display = 'none';
-          }
-          
-          showNotification('Successfully left the game');
-        })
-        .catch(error => {
-          console.error('Error leaving game:', error);
-          showNotification('Error leaving game: ' + error.message);
-        });
-    } else {
-      // Just reset UI if there's no Firebase connection
-      gameBoard.classList.remove('active');
-      gameSetup.classList.add('active');
-      updateStatusMessage('Create a new game or join an existing one');
-      showNotification('Left the game');
-    }
-  };
-
   // Toggle dark mode
   const toggleDarkMode = () => {
     document.body.classList.toggle('dark-mode');
@@ -914,6 +1295,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Event Listeners
   createGameBtn.addEventListener('click', createGame);
+  
+  // Quick Game button event handler
+  const quickGameBtn = document.getElementById('quickGameBtn');
+  if (quickGameBtn) {
+    quickGameBtn.addEventListener('click', createQuickGame);
+  }
   
   joinGameBtn.addEventListener('click', () => {
     joinGame(joinGameInput.value.trim());

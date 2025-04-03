@@ -53,6 +53,9 @@
             </div>
             
             <div class="setup-options">
+                <button id="quickGameBtn" class="quick-btn">
+                    <i class="fas fa-bolt"></i> Quick Play
+                </button>
                 <button id="createGameBtn" class="create-btn">
                     <i class="fas fa-plus-circle"></i> Create New Game
                 </button>
@@ -65,6 +68,12 @@
                         <i class="fas fa-sign-in-alt"></i> Join Game
                     </button>
                 </div>
+            </div>
+            
+            <div class="help-section">
+                <button id="helpBtn" class="help-btn">
+                    <i class="fas fa-question-circle"></i> How To Play
+                </button>
             </div>
         </div>
 
@@ -153,6 +162,51 @@
 
         <div id="notification" class="notification">
             <p id="notificationMessage"></p>
+        </div>
+    </div>
+    
+    <!-- Help Modal -->
+    <div id="helpModal" class="help-modal">
+        <div class="help-content">
+            <button id="closeHelp" class="help-close"><i class="fas fa-times"></i></button>
+            <h2>How To Play XO.GAME</h2>
+            <p>Welcome to XO.GAME, a modern take on the classic Tic-Tac-Toe with exciting new features and game modes!</p>
+            
+            <h3>Game Modes</h3>
+            
+            <div class="mode-description">
+                <h4>Classic Mode</h4>
+                <p>The traditional Tic-Tac-Toe you know and love. Place three of your symbols (X or O) in a row, column, or diagonal to win.</p>
+            </div>
+            
+            <div class="mode-description">
+                <h4>Tactical Strike Mode</h4>
+                <p>Take your strategy to the next level with special actions:</p>
+                <ul class="tactical-features">
+                    <li><i class="fas fa-crosshairs"></i> <strong>Strike:</strong> Place your symbol on the board</li>
+                    <li><i class="fas fa-shield-alt"></i> <strong>Defend:</strong> Place a shield to block your opponent</li>
+                    <li><i class="fas fa-exchange-alt"></i> <strong>Sacrifice:</strong> Give up one of your positions to gain shields</li>
+                </ul>
+            </div>
+            
+            <h3>Additional Options</h3>
+            
+            <div class="mode-description">
+                <h4>Blitz Mode</h4>
+                <p>Adds a 10-second timer for each move. Move quickly or lose your turn!</p>
+            </div>
+            
+            <div class="mode-description">
+                <h4>Gambit Mode</h4>
+                <p>Place bets with virtual coins on each game. Winner takes all!</p>
+            </div>
+            
+            <h3>How to Start</h3>
+            <p><strong>Quick Play:</strong> Start an instant game against the computer.</p>
+            <p><strong>Create New Game:</strong> Create a room and share the code with a friend.</p>
+            <p><strong>Join Game:</strong> Enter a room code to join a friend's game.</p>
+            
+            <p>Good luck and have fun!</p>
         </div>
     </div>
 
