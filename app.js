@@ -33,12 +33,16 @@ document.addEventListener('DOMContentLoaded', () => {
       creator: false,
       joiner: false
     },
-    isQuickGame: false
+    isQuickGame: false,
+    isAIGame: false
   };
 
   // References
   let gameRef = null;
   let movesRef = null;
+  let quickMatchRef = null;
+  let waitingForMatch = false;
+  let matchmakingTimeout = null;
 
   // Generate a random room code
   const generateRoomCode = () => {
@@ -808,15 +812,268 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   };
 
-  // Create quick game with AI
+  // Modified: Create quick game with matchmaking
   const createQuickGame = () => {
     // Show notification
-    showNotification('Creating a quick game...');
+    showNotification('Looking for opponent...');
     
-    // Generate a room code
+    // Get game modes
+    const modeSelector = document.getElementById('gameModeSelector');
+    const isTacticalMode = modeSelector && modeSelector.getAttribute('data-active') === 'tactical';
+    const isBlitzMode = document.getElementById('blitzModeCheckbox') && 
+                      document.getElementById('blitzModeCheckbox').checked;
+    const isGambitMode = document.getElementById('gambitModeCheckbox') && 
+                       document.getElementById('gambitModeCheckbox').checked;
+    
+    // First check if there are any waiting players
+    quickMatchRef = database.ref('quickMatches');
+    waitingForMatch = true;
+    
+    quickMatchRef.orderByChild('status').equalTo('waiting')
+      .limitToFirst(1)
+      .once('value')
+      .then((snapshot) => {
+        const matchData = snapshot.val();
+        
+        if (matchData && !gameState.gameActive) {
+          // Found a waiting player - join their game
+          const matchId = Object.keys(matchData)[0];
+          const match = matchData[matchId];
+          
+          console.log('Found waiting player, joining their game:', matchId);
+          
+          // Join this player's game
+          joinQuickMatch(matchId, match);
+        } else {
+          // No waiting players, create a new waiting match
+          createWaitingMatch(isTacticalMode, isBlitzMode, isGambitMode);
+        }
+      })
+      .catch(error => {
+        console.error('Error looking for quick matches:', error);
+        showNotification('Error finding a match: ' + error.message);
+        waitingForMatch = false;
+      });
+    
+    // Set a timeout for matchmaking (30 seconds)
+    matchmakingTimeout = setTimeout(() => {
+      if (waitingForMatch) {
+        // If still waiting, create an AI game
+        createAIGame();
+      }
+    }, 30000);
+  };
+  
+  // New: Join an existing quick match
+  const joinQuickMatch = (matchId, matchData) => {
+    // Clear the matchmaking timeout
+    if (matchmakingTimeout) {
+      clearTimeout(matchmakingTimeout);
+      matchmakingTimeout = null;
+    }
+    
+    waitingForMatch = false;
+    
+    // Setup game data
+    const roomCode = matchId;
+    gameState.roomCode = roomCode;
+    gameState.playerSymbol = 'O'; // Second player is always O
+    gameState.isPlayerTurn = false; // X goes first
+    gameState.gameActive = true;
+    gameState.board = Array(9).fill('');
+    gameState.currentTurn = 'X';
+    gameState.gameEnded = false;
+    gameState.winner = null;
+    gameState.isCreator = false;
+    gameState.isQuickGame = true;
+    
+    // Update the match status in Firebase
+    quickMatchRef.child(matchId).update({
+      status: 'matched',
+      player2: gameState.playerName,
+      matchedAt: firebase.database.ServerValue.TIMESTAMP
+    })
+    .then(() => {
+      // Create a game reference for updates and moves
+      gameRef = database.ref(`quickGames/${roomCode}`);
+      
+      // Initialize the game in Firebase
+      return gameRef.set({
+        board: gameState.board,
+        currentTurn: 'X',
+        status: 'active',
+        gameEnded: false,
+        winner: null,
+        players: {
+          X: matchData.player1,
+          O: gameState.playerName
+        },
+        createdAt: firebase.database.ServerValue.TIMESTAMP,
+        gameMode: matchData.gameMode || 'classic',
+        isBlitzMode: matchData.isBlitzMode || false,
+        isGambitMode: matchData.isGambitMode || false
+      });
+    })
+    .then(() => {
+      console.log('Joined quick match successfully');
+      
+      // Set up Firebase listeners
+      setupQuickGameListeners();
+      
+      // Update UI
+      gameSetup.classList.remove('active');
+      gameBoard.classList.add('active');
+      roomCodeDisplay.textContent = 'Quick Match';
+      playerSymbol.textContent = 'O';
+      
+      // Update status
+      updateStatusMessage("Opponent's turn! Waiting for X to make a move");
+      
+      // Show action buttons
+      copyRoomBtn.style.display = 'none';
+      exitRoomBtn.style.display = 'flex';
+      newGameBtn.style.display = 'none';
+      
+      showNotification('Match found! You are playing as O.');
+      
+      // Add animation to board
+      const boardContainer = document.querySelector('.board-container');
+      boardContainer.classList.add('game-starting');
+      
+      // Remove animation class after transition
+      setTimeout(() => {
+        boardContainer.classList.remove('game-starting');
+      }, 500);
+      
+      // Set up game mode features if needed
+      if (matchData.gameMode === 'tactical' && window.tacticalMode) {
+        window.tacticalMode.setGameMode('tactical');
+        window.tacticalMode.startTacticalGame();
+      }
+      
+      // Setup blitz mode if needed
+      if (matchData.isBlitzMode && window.tacticalMode) {
+        window.tacticalMode.state.isBlitzMode = true;
+        document.getElementById('blitzTimer').style.display = 'block';
+      }
+      
+      // Setup gambit mode if needed
+      if (matchData.isGambitMode && window.tacticalMode) {
+        window.tacticalMode.state.isGambitMode = true;
+      }
+    })
+    .catch(error => {
+      console.error('Error joining quick match:', error);
+      showNotification('Error joining the match: ' + error.message);
+      waitingForMatch = false;
+    });
+  };
+  
+  // New: Create a waiting match for quick game matchmaking
+  const createWaitingMatch = (isTacticalMode, isBlitzMode, isGambitMode) => {
+    // Generate a unique ID
+    const matchId = generateRoomCode();
+    
+    // Create a waiting match entry
+    quickMatchRef.child(matchId).set({
+      player1: gameState.playerName,
+      status: 'waiting',
+      createdAt: firebase.database.ServerValue.TIMESTAMP,
+      gameMode: isTacticalMode ? 'tactical' : 'classic',
+      isBlitzMode: isBlitzMode,
+      isGambitMode: isGambitMode
+    })
+    .then(() => {
+      console.log('Created waiting match:', matchId);
+      
+      // Update UI to waiting state
+      gameSetup.classList.remove('active');
+      gameBoard.classList.add('active');
+      roomCodeDisplay.textContent = 'Quick Match';
+      playerSymbol.textContent = 'X (Waiting)';
+      updateStatusMessage("Looking for an opponent...");
+      
+      // Show cancel button only
+      copyRoomBtn.style.display = 'none';
+      exitRoomBtn.style.display = 'flex';
+      newGameBtn.style.display = 'none';
+      
+      // Setup temporary game state
+      gameState.roomCode = matchId;
+      gameState.isCreator = true;
+      gameState.playerSymbol = 'X';
+      gameState.isQuickGame = true;
+      
+      // Listen for match
+      const matchListener = quickMatchRef.child(matchId).on('value', (snapshot) => {
+        const data = snapshot.val();
+        
+        if (!data) {
+          // Match was deleted
+          quickMatchRef.child(matchId).off('value', matchListener);
+          return;
+        }
+        
+        if (data.status === 'matched' && waitingForMatch) {
+          // Someone joined our game!
+          waitingForMatch = false;
+          
+          if (matchmakingTimeout) {
+            clearTimeout(matchmakingTimeout);
+            matchmakingTimeout = null;
+          }
+          
+          quickMatchRef.child(matchId).off('value', matchListener);
+          
+          // Initialize the game
+          gameRef = database.ref(`quickGames/${matchId}`);
+          
+          // Set up game state
+          gameState.gameActive = true;
+          gameState.isPlayerTurn = true;
+          
+          // Set up listeners
+          setupQuickGameListeners();
+          
+          showNotification('Opponent found! You are playing as X. Your turn!');
+          updateStatusMessage("Your turn! Make a move.");
+          playerSymbol.textContent = 'X';
+          
+          // Add animation to board
+          const boardContainer = document.querySelector('.board-container');
+          boardContainer.classList.add('game-starting');
+          
+          // Remove animation class after transition
+          setTimeout(() => {
+            boardContainer.classList.remove('game-starting');
+          }, 500);
+        }
+      });
+      
+      showNotification('Waiting for opponent... (30s timeout)');
+    })
+    .catch(error => {
+      console.error('Error creating waiting match:', error);
+      showNotification('Error creating match: ' + error.message);
+      waitingForMatch = false;
+    });
+  };
+  
+  // New: Create AI game as fallback when no match is found
+  const createAIGame = () => {
+    // Clear matchmaking state
+    waitingForMatch = false;
+    
+    // If we were waiting, remove our waiting entry
+    if (gameState.roomCode && quickMatchRef) {
+      quickMatchRef.child(gameState.roomCode).remove()
+        .catch(error => console.error('Error removing waiting match:', error));
+    }
+    
+    // Generate a room code for the AI game
     const roomCode = generateRoomCode();
     
-    // Setup the player symbol (always X for quick games)
+    // Setup the player symbol (always X for AI games)
     gameState.roomCode = roomCode;
     gameState.playerSymbol = 'X';
     gameState.isPlayerTurn = true;
@@ -826,38 +1083,30 @@ document.addEventListener('DOMContentLoaded', () => {
     gameState.gameEnded = false;
     gameState.winner = null;
     gameState.isCreator = true;
-    gameState.isQuickGame = true; // Flag to identify quick games
+    gameState.isQuickGame = true;
+    gameState.isAIGame = true;
     
     // Create a local game without Firebase
     // Update UI
     gameSetup.classList.remove('active');
     gameBoard.classList.add('active');
-    roomCodeDisplay.textContent = roomCode;
+    roomCodeDisplay.textContent = 'AI Match';
     playerSymbol.textContent = 'X';
     
     // Update status
     updateStatusMessage("Your turn! Select a cell to play");
     
-    // Show action buttons (only exit and new game for quick mode)
+    // Show action buttons
     copyRoomBtn.style.display = 'none';
     exitRoomBtn.style.display = 'flex';
     newGameBtn.style.display = 'flex';
     
-    showNotification('Quick game ready! Start playing 👍');
-    
-    // Add animation to board
-    const boardContainer = document.querySelector('.board-container');
-    boardContainer.classList.add('game-starting');
-    
-    // Remove animation class after transition
-    setTimeout(() => {
-      boardContainer.classList.remove('game-starting');
-    }, 500);
+    showNotification('No players found. Starting AI game!');
   };
   
   // CPU player move (simple AI for quick games)
   const makeCpuMove = () => {
-    if (!gameState.isQuickGame || gameState.gameEnded || gameState.isPlayerTurn) return;
+    if (!gameState.isQuickGame || !gameState.isAIGame || gameState.gameEnded || gameState.isPlayerTurn) return;
     
     // Add a small delay to make it feel more natural
     setTimeout(() => {
@@ -966,7 +1215,59 @@ document.addEventListener('DOMContentLoaded', () => {
     }, 700); // Delay to make it feel more natural
   };
   
-  // Modified makeMove for quick games
+  // New: Setup listeners for quick games
+  const setupQuickGameListeners = () => {
+    if (!gameRef) return;
+    
+    // Listen for game updates
+    gameRef.on('value', (snapshot) => {
+      const data = snapshot.val();
+      if (!data) return;
+      
+      // Update local game state
+      gameState.board = data.board || gameState.board;
+      gameState.currentTurn = data.currentTurn || gameState.currentTurn;
+      gameState.gameEnded = data.gameEnded || false;
+      gameState.winner = data.winner || null;
+      
+      // Update turn status
+      gameState.isPlayerTurn = gameState.currentTurn === gameState.playerSymbol;
+      
+      // Render the updated board
+      renderBoard();
+      
+      // Update game status
+      if (gameState.gameEnded) {
+        if (gameState.winner && gameState.winner.winner === 'Draw') {
+          updateStatusMessage("Game ended in a draw!");
+        } else if (gameState.winner) {
+          if (gameState.winner.winner === gameState.playerSymbol) {
+            updateStatusMessage("You won! 🎉");
+          } else {
+            updateStatusMessage("Opponent won!");
+          }
+          
+          // Highlight winning cells
+          if (gameState.winner.line) {
+            gameState.winner.line.forEach(index => {
+              boardCells[index].classList.add('winner');
+            });
+          }
+        }
+        
+        // Show new game button
+        newGameBtn.style.display = 'flex';
+      } else {
+        if (gameState.isPlayerTurn) {
+          updateStatusMessage("Your turn!");
+        } else {
+          updateStatusMessage("Opponent's turn...");
+        }
+      }
+    });
+  };
+
+  // Modified: makeMove function to handle quick games with real players
   const makeMove = (index) => {
     // Check if it's a valid move
     if (
@@ -978,8 +1279,8 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
     
-    // Quick game logic
-    if (gameState.isQuickGame) {
+    // For AI quick games
+    if (gameState.isQuickGame && gameState.isAIGame) {
       // Update local state
       const newBoard = [...gameState.board];
       newBoard[index] = gameState.playerSymbol;
@@ -1014,6 +1315,35 @@ document.addEventListener('DOMContentLoaded', () => {
       } else {
         updateStatusMessage("Computer's turn...");
         makeCpuMove();
+      }
+      
+      return;
+    }
+    
+    // For quick games with real players
+    if (gameState.isQuickGame && !gameState.isAIGame) {
+      // Update local state first
+      const newBoard = [...gameState.board];
+      newBoard[index] = gameState.playerSymbol;
+      
+      // Check for win/draw
+      const result = checkWin(newBoard);
+      
+      // Update Firebase for quick games
+      if (gameRef) {
+        gameRef.update({
+          board: newBoard,
+          currentTurn: gameState.playerSymbol === 'X' ? 'O' : 'X',
+          gameEnded: result !== null,
+          winner: result
+        })
+        .then(() => {
+          console.log('Move updated successfully');
+        })
+        .catch(error => {
+          console.error('Error updating move:', error);
+          showNotification('Error: ' + error.message);
+        });
       }
       
       return;
@@ -1081,10 +1411,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   };
 
-  // Modified resetGame for quick games
+  // Modified: resetGame function to handle quick games with real players
   const resetGame = () => {
-    if (gameState.isQuickGame) {
-      // Reset the local game state for quick games
+    if (gameState.isQuickGame && gameState.isAIGame) {
+      // Reset the local game state for AI games
       gameState.board = Array(9).fill('');
       gameState.currentTurn = 'X';
       gameState.isPlayerTurn = true;
@@ -1098,6 +1428,42 @@ document.addEventListener('DOMContentLoaded', () => {
       
       updateStatusMessage("Your turn! Select a cell to play");
       showNotification('New game! Start playing 👍');
+      return;
+    }
+    
+    if (gameState.isQuickGame && !gameState.isAIGame) {
+      // Only the X player (creator) can reset
+      if (gameState.playerSymbol !== 'X') {
+        showNotification("Only the X player can start a new game");
+        return;
+      }
+      
+      // Only allow resetting if the game has ended
+      if (!gameState.gameEnded) {
+        showNotification("Can't reset until game is finished");
+        return;
+      }
+      
+      // Reset the board
+      if (gameRef) {
+        const resetData = {
+          board: Array(9).fill(''),
+          currentTurn: 'X',
+          gameEnded: false,
+          winner: null,
+          status: 'active'
+        };
+        
+        gameRef.update(resetData)
+          .then(() => {
+            showNotification('Starting a new game');
+          })
+          .catch(error => {
+            console.error('Error resetting game:', error);
+            showNotification('Error: ' + error.message);
+          });
+      }
+      
       return;
     }
     
@@ -1129,10 +1495,54 @@ document.addEventListener('DOMContentLoaded', () => {
     showNotification('Starting a new game');
   };
   
-  // Modified exitRoom for quick games
+  // Modified: exitRoom function to handle quick games with real players
   const exitRoom = () => {
-    if (gameState.isQuickGame) {
-      // Just reset UI for quick games
+    if (gameState.isQuickGame && gameState.isAIGame) {
+      // ... existing AI game exit logic ...
+      return;
+    }
+    
+    if (gameState.isQuickGame && !gameState.isAIGame) {
+      // If we're still waiting for a match
+      if (waitingForMatch) {
+        // Clear timeout
+        if (matchmakingTimeout) {
+          clearTimeout(matchmakingTimeout);
+          matchmakingTimeout = null;
+        }
+        
+        // Remove waiting match if we created one
+        if (gameState.roomCode && quickMatchRef) {
+          quickMatchRef.child(gameState.roomCode).remove()
+            .catch(error => console.error('Error removing waiting match:', error));
+        }
+        
+        waitingForMatch = false;
+      }
+      
+      // If we were in an active game, update players
+      if (gameRef) {
+        gameRef.child('players').once('value')
+          .then((snapshot) => {
+            const players = snapshot.val() || {};
+            
+            // Create new players without this player
+            const updatedPlayers = { ...players };
+            delete updatedPlayers[gameState.playerSymbol];
+            
+            // Update Firebase
+            return gameRef.child('players').set(updatedPlayers);
+          })
+          .then(() => {
+            // Unsubscribe from listeners
+            gameRef.off();
+          })
+          .catch(error => {
+            console.error('Error updating players:', error);
+          });
+      }
+      
+      // Reset UI and game state
       gameBoard.classList.remove('active');
       gameSetup.classList.add('active');
       roomCodeDisplay.textContent = '-';
@@ -1160,7 +1570,8 @@ document.addEventListener('DOMContentLoaded', () => {
           creator: false,
           joiner: false
         },
-        isQuickGame: false
+        isQuickGame: false,
+        isAIGame: false
       };
       
       // Hide game action buttons
@@ -1226,7 +1637,8 @@ document.addEventListener('DOMContentLoaded', () => {
               creator: false,
               joiner: false
             },
-            isQuickGame: false
+            isQuickGame: false,
+            isAIGame: false
           };
           
           // Update UI
