@@ -28,6 +28,7 @@ document.addEventListener('DOMContentLoaded', () => {
     gameEnded: false,
     winner: null,
     playerName: 'Player ' + Math.floor(Math.random() * 1000),
+    isCreator: false,
   };
 
   // References
@@ -141,19 +142,17 @@ document.addEventListener('DOMContentLoaded', () => {
     
     const roomCode = generateRoomCode();
     
-    // Randomize player symbol (X or O) and first turn
-    const randomSymbols = Math.random() < 0.5;
-    const creatorSymbol = randomSymbols ? 'O' : 'X';
-    const firstTurn = Math.random() < 0.5 ? 'X' : 'O';
-    
+    // Creator will always wait for player 2 to join first
+    // Symbols will be assigned randomly after player 2 joins
     gameState.roomCode = roomCode;
-    gameState.playerSymbol = creatorSymbol;
-    gameState.isPlayerTurn = firstTurn === creatorSymbol;
+    gameState.playerSymbol = 'waiting'; // Temporary - will be assigned when player 2 joins
+    gameState.isPlayerTurn = false;
     gameState.gameActive = true;
     gameState.board = Array(9).fill('');
-    gameState.currentTurn = firstTurn;
+    gameState.currentTurn = 'X'; // Default, will be randomized after both players join
     gameState.gameEnded = false;
     gameState.winner = null;
+    gameState.isCreator = true; // Track if this player created the game
 
     // Update Firebase
     gameRef = database.ref(`games/${roomCode}`);
@@ -169,17 +168,18 @@ document.addEventListener('DOMContentLoaded', () => {
           const gameData = {
             createdAt: firebase.database.ServerValue.TIMESTAMP,
             status: 'waiting',
-            currentTurn: firstTurn,
-            randomSymbols: randomSymbols,
-            players: {}
+            currentTurn: 'X', // Will be randomized after both players join
+            players: {
+              creator: gameState.playerName // Just store as creator first, will update with X/O later
+            },
+            readyState: {
+              creator: false, // Creator will mark ready when player 2 joins
+              joiner: false
+            },
+            board: gameState.board,
+            gameEnded: false,
+            winner: null
           };
-          
-          // Set the creator in the correct field based on their symbol
-          gameData.players[creatorSymbol] = gameState.playerName;
-          
-          gameData.board = gameState.board;
-          gameData.gameEnded = false;
-          gameData.winner = null;
           
           if (isTacticalMode) {
             gameData.gameMode = 'tactical';
@@ -202,18 +202,24 @@ document.addEventListener('DOMContentLoaded', () => {
         gameSetup.classList.remove('active');
         gameBoard.classList.add('active');
         roomCodeDisplay.textContent = roomCode;
-        playerSymbol.textContent = creatorSymbol;
+        playerSymbol.textContent = 'Waiting...';
         
-        if (gameState.isPlayerTurn) {
-            updateStatusMessage("Your turn");
-        } else {
-            updateStatusMessage(`Waiting for player ${creatorSymbol === 'X' ? 'O' : 'X'} to join...`);
-        }
+        // Update status
+        updateStatusMessage("Waiting for Player 2 to join...");
         
         // Show buttons
         copyRoomBtn.style.display = 'flex';
         exitRoomBtn.style.display = 'flex';
         newGameBtn.style.display = 'none';
+        
+        // Show ready button (will be enabled when player 2 joins)
+        const readyBtn = document.createElement('button');
+        readyBtn.id = 'readyBtn';
+        readyBtn.className = 'action-btn';
+        readyBtn.disabled = true;
+        readyBtn.innerHTML = 'Start Game';
+        readyBtn.addEventListener('click', markPlayerReady);
+        document.querySelector('.action-buttons').appendChild(readyBtn);
         
         // Initialize tactical mode if needed
         if (isTacticalMode) {
@@ -253,6 +259,139 @@ document.addEventListener('DOMContentLoaded', () => {
         console.error('Database permission error:', error);
         showNotification('Database permission issue: ' + error.message);
       });
+  };
+
+  // Mark player as ready
+  const markPlayerReady = () => {
+    if (!gameRef) return;
+    
+    const playerType = gameState.isCreator ? 'creator' : 'joiner';
+    
+    // Update ready state in Firebase
+    const readyUpdate = {};
+    readyUpdate[`readyState/${playerType}`] = true;
+    
+    gameRef.update(readyUpdate)
+      .then(() => {
+        showNotification('You are ready!');
+        
+        // Disable ready button
+        const readyBtn = document.getElementById('readyBtn');
+        if (readyBtn) {
+          readyBtn.disabled = true;
+          readyBtn.textContent = 'Ready!';
+        }
+        
+        // If this is the creator and both players are ready, start the game
+        if (gameState.isCreator) {
+          gameRef.child('readyState').once('value', (snapshot) => {
+            const readyState = snapshot.val() || {};
+            
+            if (readyState.creator && readyState.joiner) {
+              // Both players are ready, randomize symbols and start the game
+              startGameWithRandomSymbols();
+            }
+          });
+        }
+      })
+      .catch(error => {
+        console.error('Error updating ready state:', error);
+        showNotification('Error: ' + error.message);
+      });
+  };
+  
+  // Start game with random symbols
+  const startGameWithRandomSymbols = () => {
+    if (!gameRef || !gameState.isCreator) return;
+    
+    // Show countdown animation
+    showCountdown(() => {
+      // Add transition effect to board
+      const boardContainer = document.querySelector('.board-container');
+      boardContainer.classList.add('game-starting');
+      
+      // Remove the class after animation completes
+      setTimeout(() => {
+        boardContainer.classList.remove('game-starting');
+      }, 500);
+      
+      // Randomize symbols and first turn
+      const creatorGetsX = Math.random() < 0.5;
+      const firstTurn = Math.random() < 0.5 ? 'X' : 'O';
+      
+      gameRef.once('value', (snapshot) => {
+        const gameData = snapshot.val() || {};
+        const players = gameData.players || {};
+        
+        // Create new players object with randomized symbols
+        const newPlayers = {
+          X: creatorGetsX ? players.creator : players.joiner,
+          O: creatorGetsX ? players.joiner : players.creator
+        };
+        
+        // Update game with new player assignments and start
+        gameRef.update({
+          players: newPlayers,
+          currentTurn: firstTurn,
+          status: 'active',
+          gameStartedAt: firebase.database.ServerValue.TIMESTAMP
+        })
+        .then(() => {
+          // Update local game state
+          gameState.playerSymbol = creatorGetsX ? 'X' : 'O';
+          gameState.isPlayerTurn = firstTurn === gameState.playerSymbol;
+          gameState.currentTurn = firstTurn;
+          
+          // Update UI
+          playerSymbol.textContent = gameState.playerSymbol;
+          
+          // Remove ready button
+          const readyBtn = document.getElementById('readyBtn');
+          if (readyBtn) {
+            readyBtn.parentNode.removeChild(readyBtn);
+          }
+          
+          if (gameState.isPlayerTurn) {
+            updateStatusMessage("Your turn");
+          } else {
+            updateStatusMessage(`${gameState.currentTurn}'s turn`);
+          }
+          
+          showNotification('Game started!');
+        })
+        .catch(error => {
+          console.error('Error starting game:', error);
+          showNotification('Error: ' + error.message);
+        });
+      });
+    });
+  };
+  
+  // Show countdown 3-2-1 animation
+  const showCountdown = (callback) => {
+    const countdownOverlay = document.createElement('div');
+    countdownOverlay.className = 'countdown-overlay';
+    document.body.appendChild(countdownOverlay);
+    
+    let count = 3;
+    
+    const updateCount = () => {
+      countdownOverlay.textContent = count;
+      
+      if (count === 0) {
+        countdownOverlay.textContent = 'GO!';
+        setTimeout(() => {
+          document.body.removeChild(countdownOverlay);
+          if (callback) callback();
+        }, 500);
+        return;
+      }
+      
+      count--;
+      setTimeout(updateCount, 1000);
+    };
+    
+    updateCount();
   };
 
   // Join an existing game
@@ -296,41 +435,29 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         if (gameData.status === 'waiting') {
-          // Determine the joiner's symbol based on creator's symbol
-          const creatorHasX = gameData.players && gameData.players.X;
-          const joinerSymbol = creatorHasX ? 'O' : 'X';
-          
+          // This is player 2 joining a waiting game
           gameState.roomCode = roomCode;
-          gameState.playerSymbol = joinerSymbol;
-          gameState.isPlayerTurn = gameData.currentTurn === joinerSymbol;
+          gameState.playerSymbol = 'waiting'; // Will be assigned when game starts
+          gameState.isPlayerTurn = false;
           gameState.board = gameData.board || Array(9).fill('');
           gameState.currentTurn = gameData.currentTurn || 'X';
           gameState.gameEnded = gameData.gameEnded || false;
           gameState.winner = gameData.winner || null;
           gameState.gameActive = true;
+          gameState.isCreator = false;
           
           // Update game in Firebase
           gameRef = database.ref(`games/${roomCode}`);
           movesRef = gameRef.child('moves');
           
-          // Create the update object with appropriate player field
+          // Update with joiner info
           const updateData = {
-            status: 'active'
+            players: { ...gameData.players, joiner: gameState.playerName }
           };
-          updateData.players = {
-            [joinerSymbol]: gameState.playerName
-          };
-          // Get existing players data to preserve other player
-          if (gameData.players) {
-            const existingSymbol = joinerSymbol === 'X' ? 'O' : 'X';
-            if (gameData.players[existingSymbol]) {
-              updateData.players[existingSymbol] = gameData.players[existingSymbol];
-            }
-          }
           
           gameRef.update(updateData)
           .then(() => {
-            console.log('Successfully updated game status to active');
+            console.log('Successfully joined game');
             
             // Listen for changes
             setupGameListeners();
@@ -339,25 +466,32 @@ document.addEventListener('DOMContentLoaded', () => {
             gameSetup.classList.remove('active');
             gameBoard.classList.add('active');
             roomCodeDisplay.textContent = roomCode;
-            playerSymbol.textContent = joinerSymbol;
+            playerSymbol.textContent = 'Waiting...';
             
-            if (gameState.isPlayerTurn) {
-              updateStatusMessage("Your turn");
-            } else {
-              updateStatusMessage(`${gameState.currentTurn}'s turn`);
-            }
+            updateStatusMessage("Waiting for game to start...");
             
             // Show action buttons
             copyRoomBtn.style.display = 'flex';
             exitRoomBtn.style.display = 'flex';
-            newGameBtn.style.display = 'flex';
+            newGameBtn.style.display = 'none';
+            
+            // Show ready button for player 2
+            const readyBtn = document.createElement('button');
+            readyBtn.id = 'readyBtn';
+            readyBtn.className = 'action-btn';
+            readyBtn.innerHTML = 'Ready!';
+            readyBtn.addEventListener('click', markPlayerReady);
+            document.querySelector('.action-buttons').appendChild(readyBtn);
             
             // Initialize tactical mode if needed
             if (gameData.gameMode === 'tactical' && window.tacticalMode) {
               window.tacticalMode.startTacticalGame();
             }
             
-            showNotification('Joined the game successfully!');
+            // Enable the creator's start button
+            gameRef.update({ 'readyState/creatorCanStart': true });
+            
+            showNotification('Joined the game successfully! Press Ready when you are ready to play.');
           })
           .catch(error => {
             console.error('Failed to update game status:', error);
@@ -448,11 +582,59 @@ document.addEventListener('DOMContentLoaded', () => {
       gameState.currentTurn = data.currentTurn || gameState.currentTurn;
       gameState.gameEnded = data.gameEnded || false;
       gameState.winner = data.winner || null;
-      gameState.isPlayerTurn = gameState.currentTurn === gameState.playerSymbol;
+      
+      // Update player symbol if it changed (after game started)
+      if (data.players && (data.players.X || data.players.O)) {
+        // If we now have symbols assigned instead of creator/joiner
+        if (gameState.playerSymbol === 'waiting') {
+          if (gameState.isCreator) {
+            if (data.players.X === gameState.playerName) {
+              gameState.playerSymbol = 'X';
+              playerSymbol.textContent = 'X';
+            } else if (data.players.O === gameState.playerName) {
+              gameState.playerSymbol = 'O';
+              playerSymbol.textContent = 'O';
+            }
+          } else { // is joiner
+            if (data.players.X === gameState.playerName) {
+              gameState.playerSymbol = 'X';
+              playerSymbol.textContent = 'X';
+            } else if (data.players.O === gameState.playerName) {
+              gameState.playerSymbol = 'O';
+              playerSymbol.textContent = 'O';
+            }
+          }
+        }
+      }
+      
+      // Update turn status once we know our symbol
+      if (gameState.playerSymbol !== 'waiting') {
+        gameState.isPlayerTurn = gameState.currentTurn === gameState.playerSymbol;
+      }
       
       // Update UI based on current game state
       renderBoard();
       
+      // Check for ready state changes
+      if (data.readyState) {
+        const readyBtn = document.getElementById('readyBtn');
+        
+        // Enable the creator's ready button when joiner joins
+        if (gameState.isCreator && data.readyState.creatorCanStart && readyBtn && readyBtn.disabled) {
+          readyBtn.disabled = false;
+          readyBtn.textContent = 'Start Game';
+          showNotification('Player 2 has joined! Press Start when ready.');
+        }
+        
+        // Show ready status of the other player
+        if (gameState.isCreator && data.readyState.joiner) {
+          showNotification('Player 2 is ready!');
+        } else if (!gameState.isCreator && data.readyState.creator) {
+          showNotification('Player 1 is ready!');
+        }
+      }
+      
+      // Update game status message based on game state
       if (gameState.gameEnded) {
         if (gameState.winner && gameState.winner.winner === 'Draw') {
           updateStatusMessage("Game ended in a draw!");
@@ -466,12 +648,18 @@ document.addEventListener('DOMContentLoaded', () => {
         newGameBtn.style.display = 'flex';
       } else {
         if (data.status === 'waiting') {
-          updateStatusMessage("Waiting for player O to join...");
-        } else {
-          if (gameState.isPlayerTurn) {
-            updateStatusMessage("Your turn");
+          if (gameState.isCreator) {
+            updateStatusMessage("Waiting for Player 2 to join...");
           } else {
-            updateStatusMessage(`${gameState.currentTurn}'s turn`);
+            updateStatusMessage("Waiting for game to start...");
+          }
+        } else if (data.status === 'active') {
+          if (gameState.playerSymbol !== 'waiting') {
+            if (gameState.isPlayerTurn) {
+              updateStatusMessage("Your turn");
+            } else {
+              updateStatusMessage(`${gameState.currentTurn}'s turn`);
+            }
           }
         }
       }
@@ -481,11 +669,14 @@ document.addEventListener('DOMContentLoaded', () => {
     gameRef.child('players').on('value', (snapshot) => {
       const players = snapshot.val() || {};
       
-      // If the other player disconnected, update the status
-      if (gameState.playerSymbol === 'X' && !players.O) {
-        updateStatusMessage("Waiting for player O to join...");
-      } else if (gameState.playerSymbol === 'O' && !players.X) {
-        updateStatusMessage("Waiting for player X to join...");
+      // If we're in an active game and using X/O symbols
+      if (gameState.playerSymbol !== 'waiting' && gameState.status === 'active') {
+        // If the other player disconnected, update the status
+        if (gameState.playerSymbol === 'X' && !players.O) {
+          updateStatusMessage("Waiting for player O to rejoin...");
+        } else if (gameState.playerSymbol === 'O' && !players.X) {
+          updateStatusMessage("Waiting for player X to rejoin...");
+        }
       }
     });
   };
@@ -640,7 +831,8 @@ document.addEventListener('DOMContentLoaded', () => {
             currentTurn: 'X',
             gameEnded: false,
             winner: null,
-            playerName: gameState.playerName
+            playerName: gameState.playerName,
+            isCreator: false,
           };
           
           // Update UI
