@@ -43,4 +43,4 @@ firebase.json
 database.rules.json
 
 # Local Netlify folder
-.netlify update_github.bat 
+.netlify 
