@@ -826,8 +826,8 @@ footer i {
 
 /* Game Board */
 .game-board {
+  margin: 20px 0;
   display: none;
-  margin-bottom: 20px;
 }
 
 .game-board.active {
@@ -839,322 +839,94 @@ footer i {
   grid-template-columns: repeat(3, 1fr);
   grid-template-rows: repeat(3, 1fr);
   gap: 10px;
-  max-width: 400px;
   margin: 0 auto;
-  aspect-ratio: 1/1;
+  max-width: 350px;
+  aspect-ratio: 1 / 1;
 }
 
-/* Enhanced board cell with flip card effect */
 .board-cell {
-  background-color: var(--cell-color);
+  background-color: rgba(94, 23, 235, 0.05);
   border-radius: var(--border-radius);
-  cursor: pointer;
-  position: relative;
-  overflow: hidden;
-  transition: all 0.3s ease;
-  box-shadow: var(--cell-shadow);
-  perspective: 1000px;
-}
-
-.board-cell-inner {
-  position: relative;
-  width: 100%;
-  height: 100%;
-  text-align: center;
-  transition: transform 0.8s;
-  transform-style: preserve-3d;
-}
-
-.board-cell.tactical-flip .board-cell-inner {
-  transform: rotateY(180deg);
-}
-
-.board-cell-front, .board-cell-back {
-  position: absolute;
-  width: 100%;
-  height: 100%;
-  -webkit-backface-visibility: hidden;
-  backface-visibility: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: var(--border-radius);
-}
-
-.board-cell-front {
-  background: linear-gradient(145deg, 
-    rgba(var(--light-surface-rgb), 0.9), 
-    rgba(var(--light-surface-rgb), 0.7));
-  color: var(--text-color);
-  border: 1px solid rgba(var(--primary-rgb), 0.1);
-}
-
-.board-cell-back {
-  background: linear-gradient(145deg, 
-    rgba(var(--primary-rgb), 0.8), 
-    rgba(var(--secondary-rgb), 0.7));
-  color: white;
-  transform: rotateY(180deg);
-}
-
-.board-cell-back.x-side {
-  background: linear-gradient(145deg, 
-    rgba(231, 76, 60, 0.8), 
-    rgba(192, 57, 43, 0.7));
-}
-
-.board-cell-back.o-side {
-  background: linear-gradient(145deg, 
-    rgba(52, 152, 219, 0.8), 
-    rgba(41, 128, 185, 0.7));
-}
-
-.dark-mode .board-cell-front {
-  background: linear-gradient(145deg, 
-    rgba(40, 40, 40, 0.9), 
-    rgba(30, 30, 30, 0.7));
-  border-color: rgba(var(--dark-primary-rgb), 0.2);
+  font-size: 2.5rem;
+  font-weight: bold;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.3s ease;
+  overflow: hidden;
 }
 
 .board-cell:hover {
+  background-color: rgba(94, 23, 235, 0.1);
   transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(var(--primary-rgb), 0.2);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
-/* Animations for game pieces */
-.board-cell.x-move::before,
-.board-cell.x-move::after {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 70%;
-  height: 8px;
-  background: linear-gradient(90deg, var(--x-color-start), var(--x-color-end));
-  border-radius: 4px;
-  z-index: 4;
-  box-shadow: 0 0 10px rgba(231, 76, 60, 0.5);
+.board-cell.x {
+  color: #FF5722;
 }
 
-.board-cell.x-move::before {
-  transform: translate(-50%, -50%) rotate(45deg);
-  animation: x-line-1 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+.board-cell.o {
+  color: #2196F3;
 }
 
-.board-cell.x-move::after {
-  transform: translate(-50%, -50%) rotate(-45deg);
-  animation: x-line-2 0.3s 0.1s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+.board-cell.winning-cell {
+  animation: winning-pulse 1.5s infinite;
+  z-index: 2;
 }
 
-@keyframes x-line-1 {
+@keyframes winning-pulse {
   0% {
-    transform: translate(-50%, -50%) rotate(45deg) scaleX(0);
-    opacity: 0;
-  }
-  100% {
-    transform: translate(-50%, -50%) rotate(45deg) scaleX(1);
-    opacity: 1;
-  }
-}
-
-@keyframes x-line-2 {
-  0% {
-    transform: translate(-50%, -50%) rotate(-45deg) scaleX(0);
-    opacity: 0;
-  }
-  100% {
-    transform: translate(-50%, -50%) rotate(-45deg) scaleX(1);
-    opacity: 1;
-  }
-}
-
-.board-cell.o-move::before {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 70%;
-  height: 70%;
-  border: 8px solid;
-  border-image: linear-gradient(90deg, var(--o-color-start), var(--o-color-end)) 1;
-  border-radius: 50%;
-  z-index: 4;
-  box-shadow: 0 0 10px rgba(52, 152, 219, 0.5);
-  animation: o-appear 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-}
-
-@keyframes o-appear {
-  0% {
-    transform: translate(-50%, -50%) scale(0);
-    opacity: 0;
-  }
-  70% {
-    transform: translate(-50%, -50%) scale(1.1);
-  }
-  100% {
-    transform: translate(-50%, -50%) scale(1);
-    opacity: 1;
-  }
-}
-
-.board-cell.winner {
-  animation: win-pulse 1.5s infinite alternate;
-}
-
-.board-cell.winner::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(var(--primary-rgb), 0.2);
-  z-index: 3;
-  border-radius: var(--border-radius);
-}
-
-@keyframes win-pulse {
-  0% {
-    box-shadow: 0 0 0 0 rgba(var(--primary-rgb), 0.7);
+    box-shadow: 0 0 0 0 rgba(94, 23, 235, 0.7);
     transform: scale(1);
   }
-  100% {
-    box-shadow: 0 0 15px 5px rgba(var(--primary-rgb), 0.3);
+  70% {
+    box-shadow: 0 0 0 15px rgba(94, 23, 235, 0);
     transform: scale(1.05);
   }
-}
-
-.dark-mode .board-cell {
-  background-color: var(--dark-cell-color);
-  box-shadow: var(--dark-cell-shadow);
-}
-
-/* CPU animation for AI moves */
-.cpu-move-animation {
-  animation: cpu-thinking 0.6s ease-in-out;
-}
-
-@keyframes cpu-thinking {
-  0% {
-    box-shadow: 0 0 0 2px rgba(var(--o-color-start-rgb), 0.1);
-  }
-  50% {
-    box-shadow: 0 0 0 10px rgba(var(--o-color-start-rgb), 0.3);
-  }
   100% {
-    box-shadow: 0 0 0 2px rgba(var(--o-color-start-rgb), 0.1);
+    box-shadow: 0 0 0 0 rgba(94, 23, 235, 0);
+    transform: scale(1);
   }
 }
 
-/* Win line indicator */
-.win-line {
-  position: absolute;
-  background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
-  height: 8px;
-  border-radius: 4px;
-  z-index: 10;
-  box-shadow: 0 0 20px rgba(var(--primary-rgb), 0.6);
-  opacity: 0;
-  transform-origin: center;
-}
-
-.win-line.horizontal {
-  width: 0;
-  top: 50%;
-  left: 0;
-  transform: translateY(-50%);
-  animation: horizontal-line-grow 0.6s 0.5s forwards cubic-bezier(0.175, 0.885, 0.32, 1.275);
-}
-
-.win-line.vertical {
-  width: 8px;
-  height: 0;
-  top: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  animation: vertical-line-grow 0.6s 0.5s forwards cubic-bezier(0.175, 0.885, 0.32, 1.275);
-}
-
-.win-line.diagonal-1 {
-  width: 0;
-  top: 50%;
-  left: 0;
-  transform: translateY(-50%) rotate(45deg);
-  transform-origin: left;
-  animation: diagonal-line-grow 0.6s 0.5s forwards cubic-bezier(0.175, 0.885, 0.32, 1.275);
-}
-
-.win-line.diagonal-2 {
-  width: 0;
-  top: 50%;
-  right: 0;
-  transform: translateY(-50%) rotate(-45deg);
-  transform-origin: right;
-  animation: diagonal-line-grow 0.6s 0.5s forwards cubic-bezier(0.175, 0.885, 0.32, 1.275);
-}
-
-@keyframes horizontal-line-grow {
-  0% {
-    width: 0;
-    opacity: 0;
-  }
-  100% {
-    width: 100%;
-    opacity: 1;
-  }
-}
-
-@keyframes vertical-line-grow {
-  0% {
-    height: 0;
-    opacity: 0;
-  }
-  100% {
-    height: 100%;
-    opacity: 1;
-  }
-}
-
-@keyframes diagonal-line-grow {
-  0% {
-    width: 0;
-    opacity: 0;
-  }
-  100% {
-    width: 140%;
-    opacity: 1;
-  }
-}
-
-/* Tactical effect animation */
-.tactical-effect {
+.win-effect {
   position: absolute;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  pointer-events: none;
-  z-index: 10;
-  border-radius: var(--border-radius);
+  background: radial-gradient(circle, rgba(94, 23, 235, 0.7) 0%, rgba(94, 23, 235, 0) 70%);
+  animation: win-effect 1.5s infinite alternate;
+  z-index: -1;
 }
 
-.strike-effect {
-  background: radial-gradient(circle, rgba(231, 76, 60, 0.7) 0%, rgba(231, 76, 60, 0) 70%);
-  animation: strike-anim 0.8s forwards;
-}
-
-@keyframes strike-anim {
+@keyframes win-effect {
   0% {
-    transform: scale(0);
-    opacity: 0;
-  }
-  50% {
-    opacity: 1;
+    opacity: 0.3;
+    transform: scale(0.8);
   }
   100% {
-    transform: scale(3);
-    opacity: 0;
+    opacity: 0.7;
+    transform: scale(1.2);
+  }
+}
+
+.board-cell.draw-cell {
+  animation: draw-pulse 1.5s forwards;
+}
+
+@keyframes draw-pulse {
+  0% {
+    background-color: rgba(94, 23, 235, 0.05);
+  }
+  50% {
+    background-color: rgba(94, 23, 235, 0.2);
+  }
+  100% {
+    background-color: rgba(94, 23, 235, 0.05);
   }
 }
 

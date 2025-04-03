@@ -1261,305 +1261,478 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   };
 
-  // Make a move
+  // Modified: makeMove function to handle quick games with real players
   const makeMove = (index) => {
-    // Don't process a move if the game has ended
-    if (gameState.gameEnded) {
-      showNotification('Game over! Start a new game.');
+    // Check if it's a valid move
+    if (
+      !gameState.gameActive ||
+      !gameState.isPlayerTurn || 
+      gameState.board[index] !== '' || 
+      gameState.gameEnded
+    ) {
       return;
     }
-
-    // Check if it's a quick game
-    if (gameState.isQuickGame) {
-      // For quick games, player is always X
-      if (gameState.board[index] || gameState.currentTurn !== 'X') {
-        return;
-      }
-
-      // Update the local board
-      gameState.board[index] = 'X';
-      
-      // Add the flip card effect for tactical mode visual feedback
-      const cell = document.querySelector(`.board-cell[data-index="${index}"]`);
-      
-      // Update cell with modern flip card effect
-      const cellInner = cell.querySelector('.board-cell-inner');
-      if (cellInner) {
-        cell.classList.add('tactical-flip');
-        setTimeout(() => {
-          cellInner.querySelector('.board-cell-back').classList.add('x-side');
-        }, 150);
-      }
-
-      // Add X move class and animation
-      cell.classList.add('x-move');
-      
-      // Add tactical effect animation
-      const effectElement = document.createElement('div');
-      effectElement.classList.add('tactical-effect', 'strike-effect');
-      cell.appendChild(effectElement);
-      setTimeout(() => effectElement.remove(), 800);
-
-      // Check for a win
-      const winner = checkWin(gameState.board);
-      if (winner) {
-        handleGameEnd(winner);
-        return;
-      }
-
-      // Check for a draw
-      if (!gameState.board.includes(null)) {
-        handleGameEnd('draw');
-        return;
-      }
-
-      // Switch turn to O
+    
+    // For AI quick games
+    if (gameState.isQuickGame && gameState.isAIGame) {
+      // Update local state
+      const newBoard = [...gameState.board];
+      newBoard[index] = gameState.playerSymbol;
+      gameState.board = newBoard;
       gameState.currentTurn = 'O';
-      updateGameStateUI();
-
-      // Wait a moment, then make the CPU move
-      setTimeout(() => {
-        makeCpuMove();
-      }, 700);
-
-      return;
-    }
-
-    // If it's not a quick game, check if it's in tactical mode
-    if (window.tacticalMode && window.tacticalMode.state.gameMode === 'tactical') {
-      // Use tactical mode move logic instead
-      const result = window.tacticalMode.makeTacticalMove(index);
+      gameState.isPlayerTurn = false;
+      
+      // Update UI
+      boardCells[index].classList.add('x-move');
+      
+      // Check for win/draw
+      const result = checkWin(newBoard);
       if (result) {
-        updateFirebaseGameState();
-      }
-      return;
-    }
-
-    // Regular multiplayer game logic
-    if (!gameState.roomCode) {
-      showNotification('Please create or join a game first');
-      return;
-    }
-
-    // Cannot make a move if not your turn
-    if (gameState.currentTurn !== gameState.playerSymbol) {
-      showNotification('Not your turn yet!');
-      return;
-    }
-
-    // Cannot move to an occupied cell
-    if (gameState.board[index]) {
-      showNotification('This cell is already occupied!');
-      return;
-    }
-
-    // Update the local board
-    gameState.board[index] = gameState.playerSymbol;
-    
-    // Add the flip card effect for visual feedback
-    const cell = document.querySelector(`.board-cell[data-index="${index}"]`);
-    
-    // Update cell with modern flip card effect
-    const cellInner = cell.querySelector('.board-cell-inner');
-    if (cellInner) {
-      cell.classList.add('tactical-flip');
-      setTimeout(() => {
-        const backFace = cellInner.querySelector('.board-cell-back');
-        if (gameState.playerSymbol === 'X') {
-          backFace.classList.add('x-side');
+        gameState.gameEnded = true;
+        gameState.winner = result;
+        
+        if (result.winner === 'Draw') {
+          updateStatusMessage("Game ended in a draw!");
         } else {
-          backFace.classList.add('o-side');
+          updateStatusMessage("You won! 🎉");
+          
+          // Highlight winning cells
+          if (result.line) {
+            result.line.forEach(index => {
+              boardCells[index].classList.add('winner');
+            });
+          }
         }
-      }, 150);
+        
+        // Show new game button
+        newGameBtn.style.display = 'flex';
+      } else {
+        updateStatusMessage("Computer's turn...");
+        makeCpuMove();
+      }
+      
+      return;
     }
     
-    // Add symbol class for animations
-    cell.classList.add(gameState.playerSymbol === 'X' ? 'x-move' : 'o-move');
+    // For quick games with real players
+    if (gameState.isQuickGame && !gameState.isAIGame) {
+      // Update local state first
+      const newBoard = [...gameState.board];
+      newBoard[index] = gameState.playerSymbol;
+      
+      // Check for win/draw
+      const result = checkWin(newBoard);
+      
+      // Update Firebase for quick games
+      if (gameRef) {
+        gameRef.update({
+          board: newBoard,
+          currentTurn: gameState.playerSymbol === 'X' ? 'O' : 'X',
+          gameEnded: result !== null,
+          winner: result
+        })
+        .then(() => {
+          console.log('Move updated successfully');
+        })
+        .catch(error => {
+          console.error('Error updating move:', error);
+          showNotification('Error: ' + error.message);
+        });
+      }
+      
+      return;
+    }
     
-    // Add tactical effect animation for visual flair
-    const effectElement = document.createElement('div');
-    effectElement.classList.add('tactical-effect', 'strike-effect');
-    cell.appendChild(effectElement);
-    setTimeout(() => effectElement.remove(), 800);
-
-    // Check for a win
-    const winner = checkWin(gameState.board);
-    if (winner) {
-      gameState.gameEnded = true;
-      gameState.winner = winner;
+    // If in tactical mode, use tactical move logic
+    if (window.tacticalMode && window.tacticalMode.state.gameMode === 'tactical') {
+      const moveResult = window.tacticalMode.makeTacticalMove(index);
+      
+      // If the tactical move was successful, update Firebase
+      if (moveResult) {
+        // Update Firebase - in a more complete implementation, we would 
+        // need to sync the tactical game state with Firebase as well
+        if (gameRef) {
+          // For simplicity, we're still updating the regular board state
+          const newBoard = [...gameState.board];
+          newBoard[index] = gameState.playerSymbol;
+          
+          gameRef.update({
+            board: newBoard,
+            currentTurn: gameState.playerSymbol === 'X' ? 'O' : 'X'
+          });
+          
+          // Record the move
+          movesRef.push({
+            player: gameState.playerSymbol,
+            position: index,
+            timestamp: firebase.database.ServerValue.TIMESTAMP,
+            tacticalAction: window.tacticalMode.state.currentAction
+          });
+        }
+        
+        // If in blitz mode, restart the timer
+        if (window.tacticalMode.state.isBlitzMode) {
+          startBlitzTimer();
+        }
+      }
+      
+      return;
     }
-
-    // Check for a draw
-    if (!gameState.board.includes(null) && !gameState.gameEnded) {
-      gameState.gameEnded = true;
-      gameState.winner = 'draw';
+    
+    // Regular move in classic mode
+    // Update local state
+    const newBoard = [...gameState.board];
+    newBoard[index] = gameState.playerSymbol;
+    
+    // Check for win/draw
+    const result = checkWin(newBoard);
+    
+    // Update Firebase
+    if (gameRef) {
+      gameRef.update({
+        board: newBoard,
+        currentTurn: gameState.playerSymbol === 'X' ? 'O' : 'X',
+        gameEnded: result !== null,
+        winner: result
+      });
+      
+      // Record the move
+      movesRef.push({
+        player: gameState.playerSymbol,
+        position: index,
+        timestamp: firebase.database.ServerValue.TIMESTAMP
+      });
     }
-
-    // Update the game state in Firebase
-    updateFirebaseGameState();
-
-    // Update the game UI
-    updateGameStateUI();
   };
 
-  // Reset the game for a new round
+  // Modified: resetGame function to handle quick games with real players
   const resetGame = () => {
-    gameState.board = [null, null, null, null, null, null, null, null, null];
-    gameState.gameEnded = false;
-    gameState.winner = null;
-
-    // Reset all board cells
-    document.querySelectorAll('.board-cell').forEach(cell => {
-      cell.className = 'board-cell';
-      cell.dataset.value = '';
+    if (gameState.isQuickGame && gameState.isAIGame) {
+      // Reset the local game state for AI games
+      gameState.board = Array(9).fill('');
+      gameState.currentTurn = 'X';
+      gameState.isPlayerTurn = true;
+      gameState.gameEnded = false;
+      gameState.winner = null;
       
-      // Reset cell inner elements for the flip card effect
-      const cellInner = cell.querySelector('.board-cell-inner');
-      if (cellInner) {
-        cellInner.style.transform = '';
-        const backFace = cellInner.querySelector('.board-cell-back');
-        if (backFace) {
-          backFace.className = 'board-cell-back';
-        }
+      // Reset UI
+      boardCells.forEach(cell => {
+        cell.classList.remove('x-move', 'o-move', 'winner', 'cpu-move-animation');
+      });
+      
+      updateStatusMessage("Your turn! Select a cell to play");
+      showNotification('New game! Start playing 👍');
+      return;
+    }
+    
+    if (gameState.isQuickGame && !gameState.isAIGame) {
+      // Only the X player (creator) can reset
+      if (gameState.playerSymbol !== 'X') {
+        showNotification("Only the X player can start a new game");
+        return;
       }
-
-      // Remove any tactical effects
-      const effects = cell.querySelectorAll('.tactical-effect');
-      effects.forEach(effect => effect.remove());
       
-      // Remove any tactical classes
-      cell.classList.remove('tactical-flip', 'x-move', 'o-move', 'defended', 'sacrificed', 'winning-cell');
-    });
-
-    // Remove any win line
-    const winLine = document.querySelector('.win-line');
-    if (winLine) winLine.remove();
-
-    // Reset tactical mode if it's active
-    if (window.tacticalMode) {
+      // Only allow resetting if the game has ended
+      if (!gameState.gameEnded) {
+        showNotification("Can't reset until game is finished");
+        return;
+      }
+      
+      // Reset the board
+      if (gameRef) {
+        const resetData = {
+          board: Array(9).fill(''),
+          currentTurn: 'X',
+          gameEnded: false,
+          winner: null,
+          status: 'active'
+        };
+        
+        gameRef.update(resetData)
+          .then(() => {
+            showNotification('Starting a new game');
+          })
+          .catch(error => {
+            console.error('Error resetting game:', error);
+            showNotification('Error: ' + error.message);
+          });
+      }
+      
+      return;
+    }
+    
+    // Original logic for online games
+    if (!gameRef) return;
+    
+    // Only allow resetting if the game has ended
+    if (!gameState.gameEnded) {
+      showNotification("Can't reset until game is finished");
+      return;
+    }
+    
+    // Reset the board
+    const resetData = {
+      board: Array(9).fill(''),
+      currentTurn: 'X',
+      gameEnded: false,
+      winner: null,
+      status: 'active'
+    };
+    
+    // If in tactical mode, reset that too
+    if (window.tacticalMode && window.tacticalMode.state.gameMode === 'tactical') {
       window.tacticalMode.resetGame();
     }
-
-    // Update Firebase only if we're in a multiplayer game
-    if (gameState.roomCode && !gameState.isQuickGame) {
-      updateFirebaseGameState();
-    }
-
-    // Update the UI
-    updateGameStateUI();
+    
+    gameRef.update(resetData);
+    
+    showNotification('Starting a new game');
   };
 
-  // Handle the end of the game
-  const handleGameEnd = (winner) => {
-    gameState.gameEnded = true;
-    gameState.winner = winner;
-
-    // Update the UI
-    updateGameStateUI();
-
-    // Show the appropriate notification
-    if (winner === 'draw') {
-      showNotification('Game ended in a draw!');
-    } else {
-      // Add winning effects to cells
-      const winningCombination = getWinningCombination();
-      if (winningCombination) {
-        highlightWinningCells(winningCombination);
-        
-        // Add a win line for better visual feedback
-        const type = getWinningType(winningCombination);
-        if (type) {
-          addWinLine(type, winningCombination);
+  // Modified: exitRoom function to handle quick games with real players
+  const exitRoom = () => {
+    if (gameState.isQuickGame && gameState.isAIGame) {
+      // ... existing AI game exit logic ...
+      return;
+    }
+    
+    if (gameState.isQuickGame && !gameState.isAIGame) {
+      // If we're still waiting for a match
+      if (waitingForMatch) {
+        // Clear timeout
+        if (matchmakingTimeout) {
+          clearTimeout(matchmakingTimeout);
+          matchmakingTimeout = null;
         }
+        
+        // Remove waiting match if we created one
+        if (gameState.roomCode && quickMatchRef) {
+          quickMatchRef.child(gameState.roomCode).remove()
+            .catch(error => console.error('Error removing waiting match:', error));
+        }
+        
+        waitingForMatch = false;
       }
       
-      // Show winner notification with modern effect
-      const winMessage = gameState.isQuickGame ? 
-        (winner === 'X' ? 'You win!' : 'Computer wins!') : 
-        `Player ${winner} wins!`;
+      // If we were in an active game, update players
+      if (gameRef) {
+        gameRef.child('players').once('value')
+          .then((snapshot) => {
+            const players = snapshot.val() || {};
+            
+            // Create new players without this player
+            const updatedPlayers = { ...players };
+            delete updatedPlayers[gameState.playerSymbol];
+            
+            // Update Firebase
+            return gameRef.child('players').set(updatedPlayers);
+          })
+      .then(() => {
+            // Unsubscribe from listeners
+            gameRef.off();
+          })
+          .catch(error => {
+            console.error('Error updating players:', error);
+          });
+      }
       
-      showNotification(winMessage, 'win');
+      // Reset UI and game state
+      gameBoard.classList.remove('active');
+      gameSetup.classList.add('active');
+      roomCodeDisplay.textContent = '-';
+      playerSymbol.textContent = '-';
+      updateStatusMessage('Create a new game or join an existing one');
+      
+      // Reset game board UI
+      boardCells.forEach(cell => {
+        cell.classList.remove('x-move', 'o-move', 'winner', 'cpu-move-animation');
+      });
+      
+      // Reset game state
+      gameState = {
+        roomCode: null,
+        playerSymbol: null,
+        isPlayerTurn: false,
+        gameActive: false,
+        board: Array(9).fill(''),
+        currentTurn: 'X',
+        gameEnded: false,
+        winner: null,
+        playerName: gameState.playerName,
+        isCreator: false,
+        readyState: {
+          creator: false,
+          joiner: false
+        },
+        isQuickGame: false,
+        isAIGame: false
+      };
+      
+      // Hide game action buttons
+      copyRoomBtn.style.display = 'none';
+      exitRoomBtn.style.display = 'none';
+      newGameBtn.style.display = 'none';
+      
+      showNotification('You left the game');
+      return;
     }
-
-    // Update Firebase only if in multiplayer game
-    if (gameState.roomCode && !gameState.isQuickGame) {
-      updateFirebaseGameState();
+    
+    // Original logic for online games
+    if (!gameRef) {
+      showNotification('Not currently in a game');
+      return;
+    }
+    
+    // Handle player removal from Firebase
+    if (gameRef) {
+      // First get the current players
+      gameRef.child('players').once('value')
+        .then((snapshot) => {
+          const players = snapshot.val() || {};
+          
+          // If we're using symbols X/O
+          if (gameState.playerSymbol === 'X' || gameState.playerSymbol === 'O') {
+            // Create new players without this player
+            const updatedPlayers = { ...players };
+            delete updatedPlayers[gameState.playerSymbol];
+            
+            // Update Firebase with the new players list
+            return gameRef.child('players').set(updatedPlayers);
+          } 
+          // If we're creator/joiner
+          else if (gameState.isCreator) {
+            const updatedPlayers = { ...players };
+            delete updatedPlayers.creator;
+            return gameRef.child('players').set(updatedPlayers);
+          } else {
+            const updatedPlayers = { ...players };
+            delete updatedPlayers.joiner;
+            return gameRef.child('players').set(updatedPlayers);
+          }
+        })
+        .then(() => {
+          // Unsubscribe from listeners
+          gameRef.off();
+          if (movesRef) movesRef.off();
+          
+          // Reset game state
+          gameState = {
+            roomCode: null,
+            playerSymbol: null,
+            isPlayerTurn: false,
+            gameActive: false,
+            board: Array(9).fill(''),
+            currentTurn: 'X',
+            gameEnded: false,
+            winner: null,
+            playerName: gameState.playerName,
+            isCreator: false,
+            readyState: {
+              creator: false,
+              joiner: false
+            },
+            isQuickGame: false,
+            isAIGame: false
+          };
+          
+          // Update UI
+          gameBoard.classList.remove('active');
+          gameSetup.classList.add('active');
+          roomCodeDisplay.textContent = '-';
+          playerSymbol.textContent = '-';
+          updateStatusMessage('Create a new game or join an existing one');
+          
+          // Reset game board UI
+          boardCells.forEach(cell => {
+            cell.classList.remove('x-move', 'o-move', 'winner');
+          });
+          
+          // If tactical mode exists
+            if (window.tacticalMode) {
+            try {
+              // Reset cells related to tactical mode
+              boardCells.forEach(cell => {
+              cell.classList.remove('shield', 'power-tile', 'bomb-tile', 'swap-tile', 'lock-tile', 'bomb-active');
+              });
+              
+              const tacticalBadge = document.getElementById('tacticalBadge');
+              const actionPanel = document.getElementById('actionPanel');
+              const blitzTimer = document.getElementById('blitzTimer');
+              const gameStats = document.getElementById('gameStats');
+              const replayContainer = document.getElementById('replayContainer');
+              
+              // Use safe access to DOM elements with null checks
+              if (tacticalBadge) tacticalBadge.style.display = 'none';
+              if (actionPanel) actionPanel.classList.remove('active');
+              if (blitzTimer) blitzTimer.style.display = 'none';
+              if (gameStats) gameStats.style.display = 'none';
+              if (replayContainer) replayContainer.style.display = 'none';
+              
+              // Set the game mode safely
+              window.tacticalMode.setGameMode('classic');
+            } catch (error) {
+              console.error('Error cleaning up tactical mode:', error);
+            }
+          }
+          
+          // Hide game action buttons
+          copyRoomBtn.style.display = 'none';
+          exitRoomBtn.style.display = 'none';
+          newGameBtn.style.display = 'none';
+          
+          // Remove ready button if present
+          const readyBtn = document.getElementById('readyBtn');
+          if (readyBtn && readyBtn.parentNode) {
+            readyBtn.parentNode.removeChild(readyBtn);
+          }
+          
+          showNotification('Successfully left the game');
+        })
+        .catch(error => {
+          console.error('Error leaving game:', error);
+          showNotification('Error leaving game: ' + error.message);
+        });
+    } else {
+      // Just reset UI if there's no Firebase connection
+      gameBoard.classList.remove('active');
+      gameSetup.classList.add('active');
+      updateStatusMessage('Create a new game or join an existing one');
+      showNotification('Left the game');
     }
   };
 
-  // Highlight winning cells
-  const highlightWinningCells = (combination) => {
-    combination.forEach(index => {
-      const cell = document.querySelector(`.board-cell[data-index="${index}"]`);
-      if (cell) {
-        cell.classList.add('winning-cell');
-      }
-    });
+  // Copy room code to clipboard
+  const copyRoomCode = () => {
+    if (!gameState.roomCode) return;
+    
+    // Use clipboard API
+    navigator.clipboard.writeText(gameState.roomCode)
+      .then(() => {
+        showNotification('Room code copied to clipboard!');
+      })
+      .catch(err => {
+        console.error('Failed to copy room code: ', err);
+        // Fallback
+        const input = document.createElement('input');
+        input.value = gameState.roomCode;
+        document.body.appendChild(input);
+        input.select();
+        document.execCommand('copy');
+        document.body.removeChild(input);
+        showNotification('Room code copied to clipboard!');
+      });
   };
 
-  // Get the winning type (horizontal, vertical, diagonal)
-  const getWinningType = (combination) => {
-    // Row wins
-    if (combination[0] % 3 === 0 && combination[1] === combination[0] + 1 && combination[2] === combination[0] + 2) {
-      return { type: 'horizontal', row: Math.floor(combination[0] / 3) };
-    }
-    // Column wins
-    if (combination[0] < 3 && combination[1] === combination[0] + 3 && combination[2] === combination[0] + 6) {
-      return { type: 'vertical', column: combination[0] % 3 };
-    }
-    // Diagonal wins
-    if (combination.includes(0) && combination.includes(4) && combination.includes(8)) {
-      return { type: 'diagonal-1' };
-    }
-    if (combination.includes(2) && combination.includes(4) && combination.includes(6)) {
-      return { type: 'diagonal-2' };
-    }
-    return null;
-  };
-
-  // Add a win line for better visualization
-  const addWinLine = (winType, combination) => {
-    const winLine = document.createElement('div');
-    winLine.classList.add('win-line');
+  // Toggle dark mode
+  const toggleDarkMode = () => {
+    document.body.classList.toggle('dark-mode');
+    const isDarkMode = document.body.classList.contains('dark-mode');
+    localStorage.setItem('darkMode', isDarkMode);
     
-    const boardElement = document.querySelector('.game-board');
-    if (!boardElement) return;
-    
-    if (winType.type === 'horizontal') {
-      winLine.classList.add('horizontal');
-      winLine.style.top = `${(winType.row * 33.33) + 16.67}%`;
-    } else if (winType.type === 'vertical') {
-      winLine.classList.add('vertical');
-      winLine.style.left = `${(winType.column * 33.33) + 16.67}%`;
-    } else if (winType.type === 'diagonal-1') {
-      winLine.classList.add('diagonal-1');
-    } else if (winType.type === 'diagonal-2') {
-      winLine.classList.add('diagonal-2');
-    }
-    
-    boardElement.appendChild(winLine);
-  };
-
-  // Get the winning combination that caused the win
-  const getWinningCombination = () => {
-    const winPatterns = [
-      [0, 1, 2], [3, 4, 5], [6, 7, 8], // Rows
-      [0, 3, 6], [1, 4, 7], [2, 5, 8], // Columns
-      [0, 4, 8], [2, 4, 6]             // Diagonals
-    ];
-
-    for (const pattern of winPatterns) {
-      const [a, b, c] = pattern;
-      if (
-        gameState.board[a] &&
-        gameState.board[a] === gameState.board[b] &&
-        gameState.board[a] === gameState.board[c]
-      ) {
-        return pattern;
-      }
-    }
-    
-    return null;
+    // Update icon
+    darkModeToggle.innerHTML = isDarkMode 
+      ? '<i class="fas fa-sun"></i>' 
+      : '<i class="fas fa-moon"></i>';
   };
 
   // Event Listeners
